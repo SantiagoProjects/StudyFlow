@@ -6,8 +6,6 @@
   <title>StudyFlow - Gestão de Estudos</title>
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Chart.js -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
   <!-- Alpine.js -->
@@ -35,7 +33,7 @@
     body { font-family: 'Inter', sans-serif; }
     .font-mono { font-family: 'JetBrains Mono', monospace; }
     .glass {
-      background: rgba(15, 23, 42, 0.75);
+      background: rgba(15, 23, 42, 0.85);
       backdrop-filter: blur(12px);
       -webkit-backdrop-filter: blur(12px);
       border: 1px solid rgba(255, 255, 255, 0.08);
@@ -45,7 +43,6 @@
       backdrop-filter: blur(8px);
       border: 1px solid rgba(255, 255, 255, 0.05);
     }
-    /* Custom Scrollbar */
     ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, 0.2); border-radius: 4px; }
@@ -92,13 +89,13 @@
   </aside>
 
   <!-- NAV MOBILE (Bottom Bar) -->
-  <div class="md:hidden fixed bottom-0 left-0 right-0 glass border-t border-slate-800 z-50 flex justify-around p-2">
+  <div class="md:hidden fixed bottom-0 left-0 right-0 glass border-t border-slate-800 z-50 flex justify-around p-1 overflow-x-auto">
     <template x-for="item in navItems" :key="item.id">
       <button @click="currentTab = item.id"
               :class="currentTab === item.id ? 'text-blue-400 font-bold' : 'text-slate-400'"
-              class="flex flex-col items-center gap-1 p-2 text-xs">
-        <i :data-lucide="item.icon" class="w-5 h-5"></i>
-        <span x-text="item.label" class="text-[10px]"></span>
+              class="flex flex-col items-center gap-1 p-2 text-xs min-w-[60px]">
+        <i :data-lucide="item.icon" class="w-4 h-4"></i>
+        <span x-text="item.label" class="text-[9px] whitespace-nowrap"></span>
       </button>
     </template>
   </div>
@@ -125,8 +122,6 @@
 
     <!-- TAB 1: DASHBOARD -->
     <div x-show="currentTab === 'dashboard'" x-cloak class="space-y-6">
-      
-      <!-- CARDS DE METRICAS -->
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div class="glass-card p-4 rounded-xl">
           <div class="flex items-center justify-between text-slate-400 text-xs font-medium mb-2">
@@ -146,25 +141,22 @@
 
         <div class="glass-card p-4 rounded-xl">
           <div class="flex items-center justify-between text-slate-400 text-xs font-medium mb-2">
-            <span>Total Estudado</span>
-            <i data-lucide="award" class="w-4 h-4 text-amber-400"></i>
+            <span>Tarefas Pendentes</span>
+            <i data-lucide="check-square" class="w-4 h-4 text-purple-400"></i>
           </div>
-          <div class="text-2xl font-bold text-white font-mono" x-text="formatMinutes(totalStudiedMinutes)"></div>
+          <div class="text-2xl font-bold text-white" x-text="tasks.filter(t => !t.completed).length"></div>
         </div>
 
         <div class="glass-card p-4 rounded-xl">
           <div class="flex items-center justify-between text-slate-400 text-xs font-medium mb-2">
-            <span>Anotações Salvas</span>
-            <i data-lucide="file-text" class="w-4 h-4 text-purple-400"></i>
+            <span>Próximas Provas</span>
+            <i data-lucide="calendar" class="w-4 h-4 text-amber-400"></i>
           </div>
-          <div class="text-2xl font-bold text-white" x-text="notes.length"></div>
+          <div class="text-2xl font-bold text-white" x-text="events.filter(e => e.type === 'prova').length"></div>
         </div>
       </div>
 
-      <!-- SEÇÃO PRINCIPAL DASHBOARD -->
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
-        <!-- MATÉRIAS & HORAS -->
         <div class="lg:col-span-2 glass-card p-5 rounded-2xl border border-slate-800">
           <h3 class="text-base font-semibold text-white mb-4 flex items-center gap-2">
             <i data-lucide="bar-chart-2" class="w-4 h-4 text-blue-400"></i> Distribuição de Estudos
@@ -199,7 +191,6 @@
           </template>
         </div>
 
-        <!-- SESSÕES RECENTES -->
         <div class="glass-card p-5 rounded-2xl border border-slate-800 flex flex-col">
           <h3 class="text-base font-semibold text-white mb-4 flex items-center gap-2">
             <i data-lucide="history" class="w-4 h-4 text-indigo-400"></i> Histórico Recente
@@ -219,7 +210,6 @@
             </template>
           </div>
         </div>
-
       </div>
     </div>
 
@@ -236,7 +226,6 @@
         <div class="text-center py-16 glass-card rounded-2xl border border-slate-800">
           <i data-lucide="book-open" class="w-12 h-12 text-slate-600 mx-auto mb-3"></i>
           <p class="text-slate-300 font-medium">Sua lista de matérias está vazia.</p>
-          <p class="text-xs text-slate-500 mt-1 max-w-sm mx-auto">Cadastre as disciplinas do seu curso ou escola para começar a contabilizar os estudos.</p>
         </div>
       </template>
 
@@ -264,14 +253,88 @@
       </div>
     </div>
 
-    <!-- TAB 3: ANOTAÇÕES -->
+    <!-- TAB 3: TAREFAS (NOVA) -->
+    <div x-show="currentTab === 'tasks'" x-cloak class="space-y-6">
+      <div class="flex justify-between items-center">
+        <h3 class="text-lg font-bold text-white">Minhas Tarefas</h3>
+        <button @click="openModal('task')" class="px-3.5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-medium flex items-center gap-2 transition">
+          <i data-lucide="plus" class="w-4 h-4"></i> Nova Tarefa
+        </button>
+      </div>
+
+      <template x-if="tasks.length === 0">
+        <div class="text-center py-16 glass-card rounded-2xl border border-slate-800">
+          <i data-lucide="check-square" class="w-12 h-12 text-slate-600 mx-auto mb-3"></i>
+          <p class="text-slate-300 font-medium">Nenhuma tarefa pendente!</p>
+        </div>
+      </template>
+
+      <div class="space-y-3">
+        <template x-for="task in tasks" :key="task.id">
+          <div class="glass-card p-4 rounded-xl border border-slate-800 flex items-center justify-between gap-4">
+            <div class="flex items-center gap-3">
+              <button @click="toggleTask(task.id)" :class="task.completed ? 'bg-emerald-500 text-slate-950 border-emerald-500' : 'border-slate-700 hover:border-blue-500'" class="w-5 h-5 rounded-md border flex items-center justify-center transition">
+                <i x-show="task.completed" data-lucide="check" class="w-3.5 h-3.5"></i>
+              </button>
+              <div>
+                <p :class="task.completed ? 'line-through text-slate-500' : 'text-slate-200 font-medium'" class="text-sm" x-text="task.title"></p>
+                <div class="flex items-center gap-2 mt-1">
+                  <span class="text-[10px] px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20" x-text="getSubjectName(task.subjectId)"></span>
+                  <span class="text-[10px] text-slate-400" x-text="task.dueDate ? 'Prazo: ' + formatDate(task.dueDate) : ''"></span>
+                </div>
+              </div>
+            </div>
+            <button @click="deleteTask(task.id)" class="text-slate-500 hover:text-rose-400 p-1 transition">
+              <i data-lucide="trash-2" class="w-4 h-4"></i>
+            </button>
+          </div>
+        </template>
+      </div>
+    </div>
+
+    <!-- TAB 4: AGENDA & PROVAS (NOVA) -->
+    <div x-show="currentTab === 'events'" x-cloak class="space-y-6">
+      <div class="flex justify-between items-center">
+        <h3 class="text-lg font-bold text-white">Agenda & Provas</h3>
+        <button @click="openModal('event')" class="px-3.5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-medium flex items-center gap-2 transition">
+          <i data-lucide="plus" class="w-4 h-4"></i> Adicionar Evento / Prova
+        </button>
+      </div>
+
+      <template x-if="events.length === 0">
+        <div class="text-center py-16 glass-card rounded-2xl border border-slate-800">
+          <i data-lucide="calendar" class="w-12 h-12 text-slate-600 mx-auto mb-3"></i>
+          <p class="text-slate-300 font-medium">Nenhum evento ou prova agendada.</p>
+        </div>
+      </template>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <template x-for="event in events" :key="event.id">
+          <div class="glass-card p-5 rounded-xl border border-slate-800 flex items-start justify-between">
+            <div class="space-y-2">
+              <div class="flex items-center gap-2">
+                <span :class="event.type === 'prova' ? 'bg-rose-500/20 text-rose-400 border-rose-500/30' : 'bg-blue-500/20 text-blue-400 border-blue-500/30'" class="text-[10px] font-bold uppercase px-2 py-0.5 rounded border" x-text="event.type"></span>
+                <span class="text-xs text-slate-400 font-mono" x-text="formatDate(event.date)"></span>
+              </div>
+              <h4 class="font-bold text-white text-base" x-text="event.title"></h4>
+              <p class="text-xs text-slate-400" x-text="'Matéria: ' + getSubjectName(event.subjectId)"></p>
+            </div>
+            <button @click="deleteEvent(event.id)" class="text-slate-500 hover:text-rose-400 p-1">
+              <i data-lucide="trash-2" class="w-4 h-4"></i>
+            </button>
+          </div>
+        </template>
+      </div>
+    </div>
+
+    <!-- TAB 5: ANOTAÇÕES -->
     <div x-show="currentTab === 'notes'" x-cloak class="space-y-6">
       <div class="flex flex-col sm:flex-row gap-3 justify-between sm:items-center">
         <div class="relative flex-1 max-w-md">
           <i data-lucide="search" class="w-4 h-4 absolute left-3 top-3 text-slate-500"></i>
-          <input type="text" x-model="searchNoteQuery" placeholder="Buscar anotações..." class="w-full bg-slate-900 border border-slate-800 rounded-lg pl-9 pr-4 py-2 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-blue-500">
+          <input type="text" x-model="searchNoteQuery" placeholder="Buscar anotações..." class="w-full bg-slate-900 border border-slate-800 rounded-lg pl-9 pr-4 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500">
         </div>
-        <button @click="openModal('note')" class="px-3.5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-medium flex items-center gap-2 transition self-start sm:self-auto">
+        <button @click="openModal('note')" class="px-3.5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-medium flex items-center gap-2 transition">
           <i data-lucide="plus" class="w-4 h-4"></i> Criar Anotação
         </button>
       </div>
@@ -285,17 +348,17 @@
 
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <template x-for="note in filteredNotes()" :key="note.id">
-          <div class="glass-card p-5 rounded-xl border border-slate-800 flex flex-col justify-between h-48 hover:border-slate-700 transition">
+          <div class="glass-card p-5 rounded-xl border border-slate-800 flex flex-col justify-between h-48">
             <div>
               <div class="flex items-center justify-between mb-2">
                 <span class="text-[10px] font-semibold px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20" x-text="getSubjectName(note.subjectId)"></span>
                 <span class="text-[10px] text-slate-500" x-text="formatDate(note.date)"></span>
               </div>
               <h4 class="font-bold text-slate-100 text-sm line-clamp-1 mb-2" x-text="note.title"></h4>
-              <p class="text-slate-400 text-xs line-clamp-3 leading-relaxed" x-text="note.content"></p>
+              <p class="text-slate-400 text-xs line-clamp-3" x-text="note.content"></p>
             </div>
             <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-800/80">
-              <button @click="deleteNote(note.id)" class="text-slate-500 hover:text-rose-400 p-1 text-xs transition">
+              <button @click="deleteNote(note.id)" class="text-slate-500 hover:text-rose-400 p-1 text-xs">
                 <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
               </button>
             </div>
@@ -304,18 +367,16 @@
       </div>
     </div>
 
-    <!-- TAB 4: MODO FOCO (POMODORO) -->
+    <!-- TAB 6: MODO FOCO -->
     <div x-show="currentTab === 'pomodoro'" x-cloak class="max-w-xl mx-auto glass-card p-8 rounded-2xl border border-slate-800 text-center space-y-6">
       <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 text-blue-400 text-xs font-semibold border border-blue-500/20">
         <i data-lucide="flame" class="w-3.5 h-3.5"></i> Modo Foco Total
       </div>
 
-      <!-- TIMER DISPLAY -->
       <div class="py-6">
         <div class="text-6xl md:text-7xl font-mono font-bold text-white tracking-wider" x-text="formatTimer(timerSeconds)"></div>
       </div>
 
-      <!-- CONTROLES -->
       <div class="flex items-center justify-center gap-3">
         <button @click="toggleTimer()" :class="timerActive ? 'bg-amber-600 hover:bg-amber-500' : 'bg-blue-600 hover:bg-blue-500'" class="px-6 py-3 rounded-xl text-white font-bold text-sm transition shadow-lg flex items-center gap-2">
           <i :data-lucide="timerActive ? 'pause' : 'play'" class="w-4 h-4"></i>
@@ -326,7 +387,6 @@
         </button>
       </div>
 
-      <!-- SELEÇÃO DE MATÉRIA -->
       <div class="pt-4 border-t border-slate-800/80 text-left">
         <label class="block text-xs font-medium text-slate-400 mb-1">Vincular a uma Matéria:</label>
         <select x-model="selectedPomodoroSubject" class="w-full bg-slate-900 border border-slate-800 rounded-lg p-2.5 text-xs text-slate-200 focus:outline-none focus:border-blue-500">
@@ -338,7 +398,7 @@
       </div>
     </div>
 
-    <!-- TAB 5: VIDEOAULAS -->
+    <!-- TAB 7: VIDEOAULAS -->
     <div x-show="currentTab === 'videos'" x-cloak class="space-y-6">
       <div class="flex justify-between items-center">
         <h3 class="text-lg font-bold text-white">Links de Aulas e Vídeos</h3>
@@ -375,30 +435,90 @@
     </div>
 
   </main>
+
   <!-- MODAIS DE CADASTRO -->
   <!-- MODAL MATÉRIA -->
   <div x-show="activeModal === 'subject'" x-cloak class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
     <div class="glass p-6 rounded-2xl max-w-md w-full border border-slate-800 space-y-4">
       <h3 class="text-lg font-bold text-white">Cadastrar Nova Matéria</h3>
-      
       <div>
         <label class="block text-xs font-medium text-slate-400 mb-1">Nome da Matéria</label>
-        <input type="text" x-model="modalSubject.name" placeholder="Ex: Matemática, História" class="w-full bg-slate-900 border border-slate-800 rounded-lg p-2.5 text-xs text-slate-100 focus:outline-none focus:border-blue-500">
+        <input type="text" x-model="modalSubject.name" placeholder="Ex: Matemática" class="w-full bg-slate-900 border border-slate-800 rounded-lg p-2.5 text-xs text-slate-100 focus:outline-none focus:border-blue-500">
       </div>
-
       <div>
-        <label class="block text-xs font-medium text-slate-400 mb-1">Professor (Opcional)</label>
+        <label class="block text-xs font-medium text-slate-400 mb-1">Professor</label>
         <input type="text" x-model="modalSubject.teacher" placeholder="Nome do professor" class="w-full bg-slate-900 border border-slate-800 rounded-lg p-2.5 text-xs text-slate-100 focus:outline-none focus:border-blue-500">
       </div>
-
       <div>
-        <label class="block text-xs font-medium text-slate-400 mb-1">Cor da Categoria</label>
+        <label class="block text-xs font-medium text-slate-400 mb-1">Cor</label>
         <input type="color" x-model="modalSubject.color" class="w-full h-10 bg-slate-900 border border-slate-800 rounded-lg p-1 cursor-pointer">
       </div>
-
       <div class="flex justify-end gap-2 pt-2">
         <button @click="closeModal()" class="px-4 py-2 rounded-lg text-xs font-medium text-slate-400 hover:bg-slate-800">Cancelar</button>
         <button @click="saveSubject()" class="px-4 py-2 rounded-lg text-xs font-medium bg-blue-600 hover:bg-blue-500 text-white">Salvar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL TAREFA -->
+  <div x-show="activeModal === 'task'" x-cloak class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="glass p-6 rounded-2xl max-w-md w-full border border-slate-800 space-y-4">
+      <h3 class="text-lg font-bold text-white">Nova Tarefa</h3>
+      <div>
+        <label class="block text-xs font-medium text-slate-400 mb-1">Título da Tarefa</label>
+        <input type="text" x-model="modalTask.title" placeholder="Ex: Resolver exercícios cap. 3" class="w-full bg-slate-900 border border-slate-800 rounded-lg p-2.5 text-xs text-slate-100 focus:outline-none focus:border-blue-500">
+      </div>
+      <div>
+        <label class="block text-xs font-medium text-slate-400 mb-1">Matéria</label>
+        <select x-model="modalTask.subjectId" class="w-full bg-slate-900 border border-slate-800 rounded-lg p-2.5 text-xs text-slate-100 focus:outline-none focus:border-blue-500">
+          <option value="">Selecione...</option>
+          <template x-for="sub in subjects" :key="sub.id">
+            <option :value="sub.id" x-text="sub.name"></option>
+          </template>
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs font-medium text-slate-400 mb-1">Data limite</label>
+        <input type="date" x-model="modalTask.dueDate" class="w-full bg-slate-900 border border-slate-800 rounded-lg p-2.5 text-xs text-slate-100 focus:outline-none focus:border-blue-500">
+      </div>
+      <div class="flex justify-end gap-2 pt-2">
+        <button @click="closeModal()" class="px-4 py-2 rounded-lg text-xs font-medium text-slate-400 hover:bg-slate-800">Cancelar</button>
+        <button @click="saveTask()" class="px-4 py-2 rounded-lg text-xs font-medium bg-blue-600 hover:bg-blue-500 text-white">Salvar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL EVENTO / PROVA -->
+  <div x-show="activeModal === 'event'" x-cloak class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="glass p-6 rounded-2xl max-w-md w-full border border-slate-800 space-y-4">
+      <h3 class="text-lg font-bold text-white">Novo Evento ou Prova</h3>
+      <div>
+        <label class="block text-xs font-medium text-slate-400 mb-1">Tipo</label>
+        <select x-model="modalEvent.type" class="w-full bg-slate-900 border border-slate-800 rounded-lg p-2.5 text-xs text-slate-100 focus:outline-none focus:border-blue-500">
+          <option value="prova">Prova / Avaliação</option>
+          <option value="evento">Trabalho / Evento</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs font-medium text-slate-400 mb-1">Título</label>
+        <input type="text" x-model="modalEvent.title" placeholder="Ex: Prova Mensal de Física" class="w-full bg-slate-900 border border-slate-800 rounded-lg p-2.5 text-xs text-slate-100 focus:outline-none focus:border-blue-500">
+      </div>
+      <div>
+        <label class="block text-xs font-medium text-slate-400 mb-1">Matéria</label>
+        <select x-model="modalEvent.subjectId" class="w-full bg-slate-900 border border-slate-800 rounded-lg p-2.5 text-xs text-slate-100 focus:outline-none focus:border-blue-500">
+          <option value="">Selecione...</option>
+          <template x-for="sub in subjects" :key="sub.id">
+            <option :value="sub.id" x-text="sub.name"></option>
+          </template>
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs font-medium text-slate-400 mb-1">Data</label>
+        <input type="date" x-model="modalEvent.date" class="w-full bg-slate-900 border border-slate-800 rounded-lg p-2.5 text-xs text-slate-100 focus:outline-none focus:border-blue-500">
+      </div>
+      <div class="flex justify-end gap-2 pt-2">
+        <button @click="closeModal()" class="px-4 py-2 rounded-lg text-xs font-medium text-slate-400 hover:bg-slate-800">Cancelar</button>
+        <button @click="saveEvent()" class="px-4 py-2 rounded-lg text-xs font-medium bg-blue-600 hover:bg-blue-500 text-white">Salvar</button>
       </div>
     </div>
   </div>
@@ -407,7 +527,6 @@
   <div x-show="activeModal === 'manualSession'" x-cloak class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
     <div class="glass p-6 rounded-2xl max-w-md w-full border border-slate-800 space-y-4">
       <h3 class="text-lg font-bold text-white">Registrar Horas de Estudo</h3>
-      
       <div>
         <label class="block text-xs font-medium text-slate-400 mb-1">Matéria</label>
         <select x-model="modalSession.subjectId" class="w-full bg-slate-900 border border-slate-800 rounded-lg p-2.5 text-xs text-slate-100 focus:outline-none focus:border-blue-500">
@@ -417,12 +536,10 @@
           </template>
         </select>
       </div>
-
       <div>
-        <label class="block text-xs font-medium text-slate-400 mb-1">Tempo estudado (em Minutos)</label>
+        <label class="block text-xs font-medium text-slate-400 mb-1">Tempo estudado (Minutos)</label>
         <input type="number" x-model="modalSession.minutes" placeholder="Ex: 45" class="w-full bg-slate-900 border border-slate-800 rounded-lg p-2.5 text-xs text-slate-100 focus:outline-none focus:border-blue-500">
       </div>
-
       <div class="flex justify-end gap-2 pt-2">
         <button @click="closeModal()" class="px-4 py-2 rounded-lg text-xs font-medium text-slate-400 hover:bg-slate-800">Cancelar</button>
         <button @click="saveSession()" class="px-4 py-2 rounded-lg text-xs font-medium bg-blue-600 hover:bg-blue-500 text-white">Salvar</button>
@@ -434,12 +551,10 @@
   <div x-show="activeModal === 'note'" x-cloak class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
     <div class="glass p-6 rounded-2xl max-w-lg w-full border border-slate-800 space-y-4">
       <h3 class="text-lg font-bold text-white">Nova Anotação</h3>
-      
       <div>
         <label class="block text-xs font-medium text-slate-400 mb-1">Título</label>
         <input type="text" x-model="modalNote.title" placeholder="Título do resumo..." class="w-full bg-slate-900 border border-slate-800 rounded-lg p-2.5 text-xs text-slate-100 focus:outline-none focus:border-blue-500">
       </div>
-
       <div>
         <label class="block text-xs font-medium text-slate-400 mb-1">Matéria</label>
         <select x-model="modalNote.subjectId" class="w-full bg-slate-900 border border-slate-800 rounded-lg p-2.5 text-xs text-slate-100 focus:outline-none focus:border-blue-500">
@@ -449,12 +564,10 @@
           </template>
         </select>
       </div>
-
       <div>
         <label class="block text-xs font-medium text-slate-400 mb-1">Conteúdo</label>
         <textarea x-model="modalNote.content" rows="4" placeholder="Escreva suas notas aqui..." class="w-full bg-slate-900 border border-slate-800 rounded-lg p-2.5 text-xs text-slate-100 focus:outline-none focus:border-blue-500"></textarea>
       </div>
-
       <div class="flex justify-end gap-2 pt-2">
         <button @click="closeModal()" class="px-4 py-2 rounded-lg text-xs font-medium text-slate-400 hover:bg-slate-800">Cancelar</button>
         <button @click="saveNote()" class="px-4 py-2 rounded-lg text-xs font-medium bg-blue-600 hover:bg-blue-500 text-white">Salvar</button>
@@ -466,17 +579,14 @@
   <div x-show="activeModal === 'video'" x-cloak class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
     <div class="glass p-6 rounded-2xl max-w-md w-full border border-slate-800 space-y-4">
       <h3 class="text-lg font-bold text-white">Adicionar Videoaula</h3>
-      
       <div>
         <label class="block text-xs font-medium text-slate-400 mb-1">Título da Aula</label>
         <input type="text" x-model="modalVideo.title" placeholder="Ex: Aula de Trigonometria" class="w-full bg-slate-900 border border-slate-800 rounded-lg p-2.5 text-xs text-slate-100 focus:outline-none focus:border-blue-500">
       </div>
-
       <div>
         <label class="block text-xs font-medium text-slate-400 mb-1">Link (URL)</label>
         <input type="url" x-model="modalVideo.url" placeholder="https://youtube.com/..." class="w-full bg-slate-900 border border-slate-800 rounded-lg p-2.5 text-xs text-slate-100 focus:outline-none focus:border-blue-500">
       </div>
-
       <div>
         <label class="block text-xs font-medium text-slate-400 mb-1">Matéria</label>
         <select x-model="modalVideo.subjectId" class="w-full bg-slate-900 border border-slate-800 rounded-lg p-2.5 text-xs text-slate-100 focus:outline-none focus:border-blue-500">
@@ -486,7 +596,6 @@
           </template>
         </select>
       </div>
-
       <div class="flex justify-end gap-2 pt-2">
         <button @click="closeModal()" class="px-4 py-2 rounded-lg text-xs font-medium text-slate-400 hover:bg-slate-800">Cancelar</button>
         <button @click="saveVideo()" class="px-4 py-2 rounded-lg text-xs font-medium bg-blue-600 hover:bg-blue-500 text-white">Salvar</button>
@@ -501,22 +610,23 @@
         currentTab: 'dashboard',
         activeModal: null,
         
-        // DADOS LOCAIS
         subjects: [],
         sessions: [],
+        tasks: [],
+        events: [],
         notes: [],
         videos: [],
         
         searchNoteQuery: '',
 
-        // CAMPOS FORMULÁRIO
         modalSubject: { name: '', teacher: '', color: '#3b82f6' },
         modalSession: { subjectId: '', minutes: '' },
+        modalTask: { title: '', subjectId: '', dueDate: '' },
+        modalEvent: { title: '', subjectId: '', date: '', type: 'prova' },
         modalNote: { title: '', content: '', subjectId: '' },
         modalVideo: { title: '', url: '', subjectId: '' },
 
-        // TIMER
-        timerSeconds: 1500, // 25 min
+        timerSeconds: 1500,
         timerActive: false,
         timerInterval: null,
         selectedPomodoroSubject: '',
@@ -524,9 +634,11 @@
         navItems: [
           { id: 'dashboard', label: 'Início', icon: 'layout-dashboard' },
           { id: 'subjects', label: 'Matérias', icon: 'book' },
+          { id: 'tasks', label: 'Tarefas', icon: 'check-square' },
+          { id: 'events', label: 'Agenda & Provas', icon: 'calendar' },
           { id: 'notes', label: 'Anotações', icon: 'file-text' },
           { id: 'pomodoro', label: 'Modo Foco', icon: 'timer' },
-          { id: 'videos', label: 'Aulas/Links', icon: 'video' }
+          { id: 'videos', label: 'Videoaulas & Links', icon: 'video' }
         ],
 
         initApp() {
@@ -534,10 +646,11 @@
           this.$nextTick(() => { lucide.createIcons(); });
         },
 
-        // CARREGAR/SALVAR LOCAL STORAGE
         loadData() {
           this.subjects = JSON.parse(localStorage.getItem('sf_subjects') || '[]');
           this.sessions = JSON.parse(localStorage.getItem('sf_sessions') || '[]');
+          this.tasks = JSON.parse(localStorage.getItem('sf_tasks') || '[]');
+          this.events = JSON.parse(localStorage.getItem('sf_events') || '[]');
           this.notes = JSON.parse(localStorage.getItem('sf_notes') || '[]');
           this.videos = JSON.parse(localStorage.getItem('sf_videos') || '[]');
         },
@@ -545,15 +658,18 @@
         saveData() {
           localStorage.setItem('sf_subjects', JSON.stringify(this.subjects));
           localStorage.setItem('sf_sessions', JSON.stringify(this.sessions));
+          localStorage.setItem('sf_tasks', JSON.stringify(this.tasks));
+          localStorage.setItem('sf_events', JSON.stringify(this.events));
           localStorage.setItem('sf_notes', JSON.stringify(this.notes));
           localStorage.setItem('sf_videos', JSON.stringify(this.videos));
         },
 
-        // TITULOS DAS ABAS
         getCurrentTabTitle() {
           const titles = {
             dashboard: 'Dashboard de Estudos',
             subjects: 'Gerenciar Matérias',
+            tasks: 'Gerenciador de Tarefas',
+            events: 'Agenda de Eventos e Provas',
             notes: 'Caderno de Anotações',
             pomodoro: 'Temporizador Pomodoro',
             videos: 'Vídeos & Links de Apoio'
@@ -565,7 +681,9 @@
           const descs = {
             dashboard: 'Acompanhe seu rendimento diário e métricas.',
             subjects: 'Cadastre suas matérias para organizar seus horários.',
-            notes: 'Guarde resumos, dúvidas e apontamentos importantes.',
+            tasks: 'Gerencie prazos e entregas pendentes.',
+            events: 'Mantenha o controlo das tuas datas de exames e testes.',
+            notes: 'Guarde resumos e apontamentos importantes.',
             pomodoro: 'Aumente sua concentração estudando em blocos de tempo.',
             videos: 'Centralize aqui os links de videoaulas para rever.'
           };
@@ -591,6 +709,52 @@
             this.subjects = this.subjects.filter(s => s.id !== id);
             this.saveData();
           }
+        },
+
+        // TAREFAS
+        saveTask() {
+          if(!this.modalTask.title.trim()) return;
+          this.tasks.push({
+            id: Date.now().toString(),
+            title: this.modalTask.title.trim(),
+            subjectId: this.modalTask.subjectId,
+            dueDate: this.modalTask.dueDate,
+            completed: false
+          });
+          this.saveData();
+          this.closeModal();
+          this.modalTask = { title: '', subjectId: '', dueDate: '' };
+        },
+
+        toggleTask(id) {
+          const task = this.tasks.find(t => t.id === id);
+          if(task) task.completed = !task.completed;
+          this.saveData();
+        },
+
+        deleteTask(id) {
+          this.tasks = this.tasks.filter(t => t.id !== id);
+          this.saveData();
+        },
+
+        // EVENTOS / PROVAS
+        saveEvent() {
+          if(!this.modalEvent.title.trim()) return;
+          this.events.push({
+            id: Date.now().toString(),
+            title: this.modalEvent.title.trim(),
+            subjectId: this.modalEvent.subjectId,
+            date: this.modalEvent.date,
+            type: this.modalEvent.type
+          });
+          this.saveData();
+          this.closeModal();
+          this.modalEvent = { title: '', subjectId: '', date: '', type: 'prova' };
+        },
+
+        deleteEvent(id) {
+          this.events = this.events.filter(e => e.id !== id);
+          this.saveData();
         },
 
         // SESSÕES DE ESTUDO
@@ -696,7 +860,7 @@
           return `${m}:${s}`;
         },
 
-        // METRICAS / UTILITÁRIOS
+        // CÁLCULOS
         get todayStudiedMinutes() {
           const today = new Date().toISOString().split('T')[0];
           return this.sessions
@@ -731,7 +895,6 @@
           return new Date(iso).toLocaleDateString('pt-BR');
         },
 
-        // MODAIS
         openModal(type) {
           this.activeModal = type;
         },
