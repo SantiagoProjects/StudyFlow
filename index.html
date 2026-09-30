@@ -1,0 +1,872 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StudyFlow - Plataforma de Estudos</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: 'var(--color-brand-50, #f5f3ff)',
+                            100: 'var(--color-brand-100, #ede9fe)',
+                            500: 'var(--color-brand-500, #8b5cf6)',
+                            600: 'var(--color-brand-600, #7c3aed)',
+                            700: 'var(--color-brand-700, #6d28d9)',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        [x-cloak] { display: none !important; }
+        
+        .theme-violet { --color-brand-50: #f5f3ff; --color-brand-100: #ede9fe; --color-brand-500: #8b5cf6; --color-brand-600: #7c3aed; --color-brand-700: #6d28d9; }
+        .theme-blue { --color-brand-50: #eff6ff; --color-brand-100: #dbeafe; --color-brand-500: #3b82f6; --color-brand-600: #2563eb; --color-brand-700: #1d4ed8; }
+        .theme-emerald { --color-brand-50: #ecfdf5; --color-brand-100: #d1fae5; --color-brand-500: #10b981; --color-brand-600: #059669; --color-brand-700: #047857; }
+        .theme-orange { --color-brand-50: #fff7ed; --color-brand-100: #ffedd5; --color-brand-500: #f97316; --color-brand-600: #ea580c; --color-brand-700: #c2410c; }
+        .theme-rose { --color-brand-50: #fff1f2; --color-brand-100: #ffe4e6; --color-brand-500: #f43f5e; --color-brand-600: #e11d48; --color-brand-700: #be123c; }
+    </style>
+</head>
+<body class="h-full bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 transition-colors duration-200"
+      x-data="studyFlowApp()" 
+      x-init="initApp()" 
+      :class="[themeColorClass, isDark ? 'dark' : '']">
+
+    <div class="min-h-full flex flex-col md:flex-row">
+        <!-- Sidebar Desktop -->
+        <aside class="hidden md:flex md:w-64 md:flex-col bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 p-4 justify-between sticky top-0 h-screen overflow-y-auto">
+            <div>
+                <div class="flex items-center gap-3 px-2 py-3 mb-6 border-b border-slate-100 dark:border-slate-700">
+                    <div class="w-10 h-10 rounded-xl bg-brand-600 text-white flex items-center justify-center font-extrabold text-xl shadow-lg shadow-brand-500/30">
+                        SF
+                    </div>
+                    <div>
+                        <h1 class="font-bold text-lg leading-none tracking-tight">StudyFlow</h1>
+                        <span class="text-xs text-slate-400">Do Zero à Aprovação</span>
+                    </div>
+                </div>
+
+                <nav class="space-y-1">
+                    <template x-for="item in navItems" :key="item.id">
+                        <button @click="currentTab = item.id" 
+                                :class="currentTab === item.id ? 'bg-brand-50 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400 font-semibold' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700/50'"
+                                class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all">
+                            <i :data-lucide="item.icon" class="w-5 h-5"></i>
+                            <span x-text="item.label"></span>
+                        </button>
+                    </template>
+                </nav>
+            </div>
+
+            <!-- Card de Progresso Geral -->
+            <div class="bg-slate-50 dark:bg-slate-900/60 p-3.5 rounded-2xl border border-slate-200/80 dark:border-slate-700/80">
+                <div class="flex justify-between items-center text-xs mb-1.5 font-medium">
+                    <span class="text-slate-500 dark:text-slate-400">Total Estudado</span>
+                    <span class="text-brand-600 dark:text-brand-400 font-bold" x-text="formatTotalHours(getTotalStudiedMinutes())"></span>
+                </div>
+                <div class="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2 overflow-hidden">
+                    <div class="bg-brand-500 h-2 rounded-full transition-all duration-300" :style="`width: ${Math.min(100, (getTotalStudiedMinutes()/600)*100)}%`"></div>
+                </div>
+                <div class="mt-2.5 pt-2 border-t border-slate-200/50 dark:border-slate-700/50 flex justify-between items-center text-xs text-slate-500 dark:text-slate-400">
+                    <span class="flex items-center gap-1">📚 <span class="font-bold text-slate-700 dark:text-slate-200" x-text="subjects.length"></span> matérias</span>
+                    <button @click="currentTab = 'settings'" class="hover:text-brand-600 dark:hover:text-brand-400 flex items-center gap-1">
+                        <i data-lucide="settings" class="w-3.5 h-3.5"></i> Perfil
+                    </button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="flex-1 pb-24 md:pb-8 p-4 md:p-8 max-w-7xl mx-auto w-full">
+            <!-- Header Superior -->
+            <div class="flex justify-between items-center mb-6">
+                <div>
+                    <h2 class="text-2xl font-bold tracking-tight" x-text="getTabTitle()"></h2>
+                    <p class="text-xs md:text-sm text-slate-500 dark:text-slate-400" x-text="getTabSubtitle()"></p>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button @click="currentTab = 'focus'" class="bg-brand-600 hover:bg-brand-700 text-white px-3.5 py-2 rounded-xl text-xs md:text-sm font-semibold flex items-center gap-2 shadow-sm transition-transform active:scale-95">
+                        <i data-lucide="play-circle" class="w-4 h-4"></i>
+                        <span>Estudar Agora</span>
+                    </button>
+                    <button @click="toggleTheme()" class="p-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700">
+                        <i x-show="!isDark" data-lucide="moon" class="w-4 h-4"></i>
+                        <i x-show="isDark" data-lucide="sun" class="w-4 h-4"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 1. DASHBOARD INÍCIO -->
+            <div x-show="currentTab === 'dashboard'" class="space-y-6">
+                <!-- Banner Boas Vindas -->
+                <div class="bg-gradient-to-r from-brand-600 to-brand-700 rounded-3xl p-6 text-white shadow-xl shadow-brand-500/10 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 relative overflow-hidden">
+                    <div>
+                        <span class="inline-block px-3 py-1 bg-white/20 backdrop-blur-md rounded-full text-xs font-medium mb-3">👋 Bem-vindo ao StudyFlow</span>
+                        <h3 class="text-2xl md:text-3xl font-extrabold mb-1">Seu painel totalmente em branco</h3>
+                        <p class="text-brand-100 text-sm max-w-lg">Cadastre suas primeiras matérias e adicione horas estudadas ou videoaulas para acompanhar seu progresso.</p>
+                    </div>
+                    <button @click="addSubjectModal = true" class="bg-white text-brand-700 font-bold px-4 py-2.5 rounded-2xl text-xs hover:bg-brand-50 transition shadow-md flex items-center gap-2 whitespace-nowrap">
+                        <i data-lucide="plus" class="w-4 h-4"></i> Cadastrar Matéria
+                    </button>
+                </div>
+
+                <!-- Resumo Rápido Cards -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div class="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-700/80">
+                        <div class="text-xs font-medium text-slate-500 mb-1">Matérias Ativas</div>
+                        <div class="font-bold text-2xl text-slate-800 dark:text-slate-100" x-text="subjects.length"></div>
+                        <div class="text-xs text-brand-600 font-semibold mt-0.5" x-text="subjects.length === 0 ? 'Nenhuma cadastrada' : 'Cadastradas'"></div>
+                    </div>
+                    <div class="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-700/80">
+                        <div class="text-xs font-medium text-slate-500 mb-1">Horas Estudo Total</div>
+                        <div class="font-bold text-2xl text-slate-800 dark:text-slate-100" x-text="formatTotalHours(getTotalStudiedMinutes())"></div>
+                        <div class="text-xs text-emerald-500 font-medium mt-0.5">Tempo registrado</div>
+                    </div>
+                    <div class="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-700/80">
+                        <div class="text-xs font-medium text-slate-500 mb-1">Videoaulas / Links</div>
+                        <div class="font-bold text-2xl text-slate-800 dark:text-slate-100" x-text="videoLinks.length"></div>
+                        <div class="text-xs text-indigo-500 font-medium mt-0.5" x-text="`${videoLinks.filter(l => l.watched).length} assistidas`"></div>
+                    </div>
+                    <div class="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-700/80">
+                        <div class="text-xs font-medium text-slate-500 mb-1">Tarefas Pendentes</div>
+                        <div class="font-bold text-2xl text-slate-800 dark:text-slate-100" x-text="tasks.filter(t => !t.done).length"></div>
+                        <div class="text-xs text-amber-500 font-medium mt-0.5" x-text="`${tasks.filter(t => t.done).length} concluídas`"></div>
+                    </div>
+                </div>
+
+                <!-- Gráfico de Horas por Matéria e Lista de Atalhos -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div class="lg:col-span-2 bg-white dark:bg-slate-800 p-6 rounded-3xl border border-slate-200/80 dark:border-slate-700/80">
+                        <h4 class="font-bold text-slate-800 dark:text-slate-100 mb-4 flex items-center justify-between">
+                            <span>Distribuição do Tempo de Estudo por Matéria</span>
+                            <span class="text-xs text-slate-400 font-normal">Minutos estudados</span>
+                        </h4>
+                        <div class="h-64 flex items-center justify-center">
+                            <template x-if="subjects.length === 0">
+                                <div class="text-center text-slate-400 text-xs">
+                                    <i data-lucide="bar-chart-2" class="w-10 h-10 mx-auto mb-2 opacity-50"></i>
+                                    Cadastre matérias para visualizar seu gráfico de estudos.
+                                </div>
+                            </template>
+                            <canvas id="dashboardWeeklyChart" x-show="subjects.length > 0"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="bg-white dark:bg-slate-800 p-6 rounded-3xl border border-slate-200/80 dark:border-slate-700/80">
+                        <h4 class="font-bold text-slate-800 dark:text-slate-100 mb-4">Ações Rápidas</h4>
+                        <div class="space-y-3">
+                            <button @click="addSubjectModal = true" class="w-full p-3 bg-slate-50 dark:bg-slate-700/40 hover:bg-slate-100 rounded-2xl flex items-center gap-3 text-xs font-semibold text-slate-700 dark:text-slate-200 transition">
+                                <div class="p-2 bg-brand-100 text-brand-600 rounded-xl"><i data-lucide="book-open" class="w-4 h-4"></i></div>
+                                Cadastrar Matéria
+                            </button>
+                            <button @click="addTimeModal = true" class="w-full p-3 bg-slate-50 dark:bg-slate-700/40 hover:bg-slate-100 rounded-2xl flex items-center gap-3 text-xs font-semibold text-slate-700 dark:text-slate-200 transition">
+                                <div class="p-2 bg-emerald-100 text-emerald-600 rounded-xl"><i data-lucide="clock" class="w-4 h-4"></i></div>
+                                Registrar Tempo Manual
+                            </button>
+                            <button @click="addLinkModal = true" class="w-full p-3 bg-slate-50 dark:bg-slate-700/40 hover:bg-slate-100 rounded-2xl flex items-center gap-3 text-xs font-semibold text-slate-700 dark:text-slate-200 transition">
+                                <div class="p-2 bg-indigo-100 text-indigo-600 rounded-xl"><i data-lucide="video" class="w-4 h-4"></i></div>
+                                Adicionar Videoaula / Link
+                            </button>
+                            <button @click="addTaskModal = true" class="w-full p-3 bg-slate-50 dark:bg-slate-700/40 hover:bg-slate-100 rounded-2xl flex items-center gap-3 text-xs font-semibold text-slate-700 dark:text-slate-200 transition">
+                                <div class="p-2 bg-amber-100 text-amber-600 rounded-xl"><i data-lucide="check-square" class="w-4 h-4"></i></div>
+                                Criar Nova Tarefa
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. MATÉRIAS & ADIÇÃO DE TEMPO -->
+            <div x-show="currentTab === 'subjects'" class="space-y-6">
+                <div class="flex flex-wrap justify-between items-center gap-4 bg-white dark:bg-slate-800 p-4 rounded-3xl border border-slate-200/80 dark:border-slate-700/80">
+                    <h3 class="font-bold text-slate-800 dark:text-slate-100 text-lg">Minhas Matérias e Tempo Estudado</h3>
+                    <div class="flex items-center gap-2">
+                        <button @click="addTimeModal = true" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 shadow-sm">
+                            <i data-lucide="clock" class="w-4 h-4"></i> Registrar Tempo
+                        </button>
+                        <button @click="addSubjectModal = true" class="bg-brand-600 hover:bg-brand-700 text-white px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 shadow-sm">
+                            <i data-lucide="plus" class="w-4 h-4"></i> Nova Matéria
+                        </button>
+                    </div>
+                </div>
+
+                <template x-if="subjects.length === 0">
+                    <div class="bg-white dark:bg-slate-800 p-12 rounded-3xl border border-slate-200/80 dark:border-slate-700/80 text-center max-w-md mx-auto">
+                        <div class="w-16 h-16 bg-brand-50 dark:bg-brand-900/30 text-brand-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <i data-lucide="book-open" class="w-8 h-8"></i>
+                        </div>
+                        <h4 class="font-bold text-slate-800 dark:text-slate-100 text-lg mb-1">Nenhuma matéria cadastrada</h4>
+                        <p class="text-xs text-slate-400 mb-6">Comece adicionando as disciplinas que você estuda (ex: Matemática, História, Código, Inglês...).</p>
+                        <button @click="addSubjectModal = true" class="bg-brand-600 text-white px-4 py-2.5 rounded-xl text-xs font-bold shadow-md hover:bg-brand-700">
+                            Adicionar Primeira Matéria
+                        </button>
+                    </div>
+                </template>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" x-show="subjects.length > 0">
+                    <template x-for="subject in subjects" :key="subject.id">
+                        <div class="bg-white dark:bg-slate-800 p-5 rounded-3xl border border-slate-200/80 dark:border-slate-700/80 relative overflow-hidden flex flex-col justify-between">
+                            <div class="w-2 h-full absolute left-0 top-0" :style="`background-color: ${subject.color}`"></div>
+                            <div>
+                                <div class="flex justify-between items-start mb-2 pl-2">
+                                    <div>
+                                        <h4 class="font-bold text-base text-slate-800 dark:text-slate-100" x-text="subject.name"></h4>
+                                        <p class="text-xs text-slate-400" x-text="subject.teacher ? `Prof. ${subject.teacher}` : 'Sem prof. atribuído'"></p>
+                                    </div>
+                                    <button @click="deleteSubject(subject.id)" class="text-slate-300 hover:text-red-500 p-1">
+                                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                    </button>
+                                </div>
+
+                                <div class="pl-2 mt-4 space-y-2">
+                                    <div class="flex justify-between text-xs text-slate-500">
+                                        <span>Tempo Estudado:</span>
+                                        <strong class="text-slate-800 dark:text-slate-200" x-text="formatTotalHours(subject.studiedMinutes || 0)"></strong>
+                                    </div>
+                                    <div class="flex justify-between text-xs text-slate-500">
+                                        <span>Nota Atual / Meta:</span>
+                                        <strong class="text-brand-600" x-text="`${subject.currentGrade || 0} / ${subject.targetGrade || 10}`"></strong>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="mt-6 pt-4 border-t border-slate-100 dark:border-slate-700/60 flex items-center justify-between gap-2 pl-2">
+                                <button @click="quickAddTime(subject.id, 30)" class="flex-1 py-1.5 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:bg-brand-50 hover:text-brand-600 rounded-xl text-xs font-semibold transition">
+                                    +30 min
+                                </button>
+                                <button @click="quickAddTime(subject.id, 60)" class="flex-1 py-1.5 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:bg-brand-50 hover:text-brand-600 rounded-xl text-xs font-semibold transition">
+                                    +1 hora
+                                </button>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+
+            <!-- 3. NOVA ABA: VIDEOAULAS & LINKS DEDICADOS -->
+            <div x-show="currentTab === 'links'" class="space-y-6">
+                <div class="flex flex-wrap justify-between items-center gap-4 bg-white dark:bg-slate-800 p-4 rounded-3xl border border-slate-200/80 dark:border-slate-700/80">
+                    <div class="flex items-center gap-2">
+                        <button @click="addLinkModal = true" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 shadow-sm">
+                            <i data-lucide="plus" class="w-4 h-4"></i> Adicionar Videoaula / Link
+                        </button>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <select x-model="linkSubjectFilter" class="bg-slate-100 dark:bg-slate-700 text-xs rounded-xl px-3 py-2 border-0">
+                            <option value="all">Todas as Matérias</option>
+                            <template x-for="subj in subjects" :key="subj.id">
+                                <option :value="subj.id" x-text="subj.name"></option>
+                            </template>
+                        </select>
+                        <select x-model="linkStatusFilter" class="bg-slate-100 dark:bg-slate-700 text-xs rounded-xl px-3 py-2 border-0">
+                            <option value="all">Todos os Status</option>
+                            <option value="unwatched">A Assistir</option>
+                            <option value="watched">Assistidos</option>
+                        </select>
+                    </div>
+                </div>
+
+                <template x-if="filteredLinks.length === 0">
+                    <div class="bg-white dark:bg-slate-800 p-12 rounded-3xl border border-slate-200/80 dark:border-slate-700/80 text-center max-w-md mx-auto">
+                        <div class="w-16 h-16 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <i data-lucide="youtube" class="w-8 h-8"></i>
+                        </div>
+                        <h4 class="font-bold text-slate-800 dark:text-slate-100 text-lg mb-1">Nenhuma videoaula salva</h4>
+                        <p class="text-xs text-slate-400 mb-6">Salve links de aulas do YouTube, PDFs do Drive ou artigos para estudar depois.</p>
+                        <button @click="addLinkModal = true" class="bg-indigo-600 text-white px-4 py-2.5 rounded-xl text-xs font-bold shadow-md hover:bg-indigo-700">
+                            Adicionar Novo Link
+                        </button>
+                    </div>
+                </template>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" x-show="filteredLinks.length > 0">
+                    <template x-for="item in filteredLinks" :key="item.id">
+                        <div class="bg-white dark:bg-slate-800 p-5 rounded-3xl border border-slate-200/80 dark:border-slate-700/80 flex flex-col justify-between space-y-4">
+                            <div>
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-md"
+                                          :class="item.platform === 'YouTube' ? 'bg-red-100 text-red-600' : (item.platform === 'Drive' ? 'bg-blue-100 text-blue-600' : 'bg-slate-100 text-slate-600')"
+                                          x-text="item.platform"></span>
+                                    <span class="text-xs font-semibold px-2 py-0.5 rounded-full"
+                                          :class="item.watched ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'"
+                                          x-text="item.watched ? 'Assistido ✓' : 'A Assistir'"></span>
+                                </div>
+                                <h4 class="font-bold text-sm text-slate-800 dark:text-slate-100 line-clamp-2" x-text="item.title"></h4>
+                                <p class="text-xs text-slate-400 mt-1" x-text="getSubjectName(item.subjectId)"></p>
+                                <p x-show="item.notes" class="text-xs text-slate-500 bg-slate-50 dark:bg-slate-700/40 p-2 rounded-xl mt-3" x-text="item.notes"></p>
+                            </div>
+
+                            <div class="pt-3 border-t border-slate-100 dark:border-slate-700 flex items-center justify-between gap-2">
+                                <button @click="toggleLinkWatched(item)" class="text-xs font-semibold px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 text-slate-600 dark:text-slate-300">
+                                    <span x-text="item.watched ? 'Marcar Pendente' : 'Marcar Concluído'"></span>
+                                </button>
+                                <div class="flex items-center gap-1">
+                                    <a :href="item.url" target="_blank" class="p-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition flex items-center gap-1 text-xs font-medium">
+                                        <span>Abrir</span>
+                                        <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
+                                    </a>
+                                    <button @click="deleteLink(item.id)" class="p-2 text-slate-300 hover:text-red-500 rounded-xl">
+                                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+
+            <!-- 4. QUADRO DE TAREFAS -->
+            <div x-show="currentTab === 'tasks'" class="space-y-6">
+                <div class="flex justify-between items-center bg-white dark:bg-slate-800 p-4 rounded-3xl border border-slate-200/80 dark:border-slate-700/80">
+                    <h3 class="font-bold text-slate-800 dark:text-slate-100 text-lg">Tarefas de Estudo</h3>
+                    <button @click="addTaskModal = true" class="bg-brand-600 text-white px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2">
+                        <i data-lucide="plus" class="w-4 h-4"></i> Criar Tarefa
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <!-- A Fazer -->
+                    <div class="bg-slate-100 dark:bg-slate-800/50 p-4 rounded-3xl border border-slate-200/60 dark:border-slate-700/60">
+                        <h4 class="font-bold text-slate-700 dark:text-slate-300 text-sm mb-3 flex items-center justify-between">
+                            <span>📌 A FAZER</span>
+                            <span class="bg-slate-200 dark:bg-slate-700 text-xs px-2 py-0.5 rounded-full" x-text="tasks.filter(t => t.status === 'todo').length"></span>
+                        </h4>
+                        <div class="space-y-3">
+                            <template x-for="task in tasks.filter(t => t.status === 'todo')" :key="task.id">
+                                <div class="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-700 shadow-sm">
+                                    <div class="font-semibold text-sm text-slate-800 dark:text-slate-100" x-text="task.title"></div>
+                                    <span class="text-[10px] text-brand-600 font-bold" x-text="getSubjectName(task.subjectId)"></span>
+                                    <div class="flex justify-between items-center mt-3 pt-2 border-t border-slate-100 dark:border-slate-700/60 text-xs">
+                                        <button @click="deleteTask(task.id)" class="text-slate-300 hover:text-red-500"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+                                        <button @click="moveTask(task.id, 'done')" class="text-brand-600 font-semibold">Concluir ✓</button>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+
+                    <!-- Concluídas -->
+                    <div class="bg-slate-100 dark:bg-slate-800/50 p-4 rounded-3xl border border-slate-200/60 dark:border-slate-700/60 md:col-span-2">
+                        <h4 class="font-bold text-emerald-600 text-sm mb-3 flex items-center justify-between">
+                            <span>✅ CONCLUÍDAS</span>
+                            <span class="bg-emerald-100 text-emerald-700 text-xs px-2 py-0.5 rounded-full" x-text="tasks.filter(t => t.status === 'done').length"></span>
+                        </h4>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <template x-for="task in tasks.filter(t => t.status === 'done')" :key="task.id">
+                                <div class="bg-white dark:bg-slate-800 p-3 rounded-2xl border border-slate-200/80 dark:border-slate-700 opacity-75 flex justify-between items-center">
+                                    <span class="font-medium text-xs line-through text-slate-500" x-text="task.title"></span>
+                                    <button @click="deleteTask(task.id)" class="text-slate-300 hover:text-red-500"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 5. MODO FOCO / POMODORO -->
+            <div x-show="currentTab === 'focus'" class="max-w-xl mx-auto space-y-6 text-center">
+                <div class="bg-white dark:bg-slate-800 p-8 rounded-3xl border border-slate-200/80 dark:border-slate-700/80 shadow-xl">
+                    <h3 class="text-xl font-bold mb-1">Timer Pomodoro</h3>
+                    <p class="text-xs text-slate-400 mb-6">Ao terminar o cronômetro, o tempo é somado automaticamente à matéria selecionada!</p>
+
+                    <!-- Seleção de Matéria -->
+                    <div class="mb-6">
+                        <label class="text-xs text-slate-400 block mb-2">Estudando para:</label>
+                        <select x-model="focusSubjectId" class="bg-slate-100 dark:bg-slate-700 rounded-xl px-4 py-2.5 text-xs font-semibold border-0 max-w-xs w-full">
+                            <template x-for="subj in subjects" :key="subj.id">
+                                <option :value="subj.id" x-text="subj.name"></option>
+                            </template>
+                        </select>
+                    </div>
+
+                    <!-- Relógio Digital -->
+                    <div class="text-6xl md:text-8xl font-black tracking-tight text-slate-800 dark:text-slate-100 my-8 font-mono" x-text="formatTime(focusSecondsLeft)"></div>
+
+                    <!-- Controles -->
+                    <div class="flex justify-center items-center gap-4">
+                        <button @click="toggleFocusTimer()" class="w-16 h-16 rounded-full bg-brand-600 text-white flex items-center justify-center text-xl shadow-lg shadow-brand-500/30 hover:scale-105 transition">
+                            <i :data-lucide="focusRunning ? 'pause' : 'play'" class="w-8 h-8"></i>
+                        </button>
+                        <button @click="resetFocusTimer()" class="w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 flex items-center justify-center hover:bg-slate-200 transition">
+                            <i data-lucide="rotate-ccw" class="w-5 h-5"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 6. PERFIL E CONFIGURAÇÕES DO ZERO -->
+            <div x-show="currentTab === 'settings'" class="max-w-xl mx-auto space-y-6">
+                <div class="bg-white dark:bg-slate-800 p-6 rounded-3xl border border-slate-200/80 dark:border-slate-700/80 space-y-6">
+                    <h4 class="font-bold text-lg text-slate-800 dark:text-slate-100">Personalização de Tema</h4>
+                    
+                    <div>
+                        <label class="text-xs text-slate-400 block mb-2">Cor de Destaque:</label>
+                        <div class="flex gap-3">
+                            <button @click="setThemeColor('theme-violet')" class="w-8 h-8 rounded-full bg-violet-500 ring-2 ring-offset-2 ring-violet-500"></button>
+                            <button @click="setThemeColor('theme-blue')" class="w-8 h-8 rounded-full bg-blue-500 ring-2 ring-offset-2 ring-blue-500"></button>
+                            <button @click="setThemeColor('theme-emerald')" class="w-8 h-8 rounded-full bg-emerald-500 ring-2 ring-offset-2 ring-emerald-500"></button>
+                            <button @click="setThemeColor('theme-orange')" class="w-8 h-8 rounded-full bg-orange-500 ring-2 ring-offset-2 ring-orange-500"></button>
+                            <button @click="setThemeColor('theme-rose')" class="w-8 h-8 rounded-full bg-rose-500 ring-2 ring-offset-2 ring-rose-500"></button>
+                        </div>
+                    </div>
+
+                    <div class="pt-6 border-t border-slate-100 dark:border-slate-700">
+                        <h4 class="font-bold text-sm text-red-600 mb-1">Zona de Perigo</h4>
+                        <p class="text-xs text-slate-400 mb-4">Apague todos os dados salvos para recomeçar o aplicativo 100% do zero.</p>
+                        <button @click="resetAllDataZero()" class="px-4 py-2.5 bg-red-50 text-red-600 font-bold text-xs rounded-xl hover:bg-red-100 transition border border-red-200">
+                            🗑 Limpar Tudo e Começar do Zero
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Bottom Navigation Mobile -->
+        <nav class="md:hidden fixed bottom-0 left-0 right-0 bg-white/90 dark:bg-slate-800/90 backdrop-blur-md border-t border-slate-200 dark:border-slate-700 px-2 py-2 flex justify-around items-center z-50">
+            <template x-for="item in navItems.slice(0, 5)" :key="item.id">
+                <button @click="currentTab = item.id" 
+                        :class="currentTab === item.id ? 'text-brand-600 dark:text-brand-400 font-bold' : 'text-slate-400'"
+                        class="flex flex-col items-center gap-0.5 p-1">
+                    <i :data-lucide="item.icon" class="w-5 h-5"></i>
+                    <span class="text-[10px]" x-text="item.label"></span>
+                </button>
+            </template>
+        </nav>
+    </div>
+
+    <!-- MODAIS DE CADASTRO -->
+    
+    <!-- Modal: Adicionar Matéria -->
+    <div x-show="addSubjectModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" x-cloak>
+        <div class="bg-white dark:bg-slate-800 rounded-3xl max-w-md w-full p-6 border border-slate-200 dark:border-slate-700 shadow-2xl">
+            <h3 class="font-bold text-lg mb-4 text-slate-800 dark:text-slate-100">Nova Matéria</h3>
+            <div class="space-y-3">
+                <div>
+                    <label class="text-xs font-semibold text-slate-500 block mb-1">Nome da Matéria *</label>
+                    <input type="text" x-model="newSubject.name" placeholder="Ex: Matemática, Física, Inglês" class="w-full bg-slate-100 dark:bg-slate-700 border-0 rounded-xl px-3.5 py-2.5 text-sm">
+                </div>
+                <div>
+                    <label class="text-xs font-semibold text-slate-500 block mb-1">Nome do Professor (opcional)</label>
+                    <input type="text" x-model="newSubject.teacher" placeholder="Ex: Prof. Carlos" class="w-full bg-slate-100 dark:bg-slate-700 border-0 rounded-xl px-3.5 py-2.5 text-sm">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="text-xs font-semibold text-slate-500 block mb-1">Nota Atual</label>
+                        <input type="number" step="0.1" x-model="newSubject.currentGrade" placeholder="0.0" class="w-full bg-slate-100 dark:bg-slate-700 border-0 rounded-xl px-3.5 py-2.5 text-sm">
+                    </div>
+                    <div>
+                        <label class="text-xs font-semibold text-slate-500 block mb-1">Meta de Nota</label>
+                        <input type="number" step="0.1" x-model="newSubject.targetGrade" placeholder="10.0" class="w-full bg-slate-100 dark:bg-slate-700 border-0 rounded-xl px-3.5 py-2.5 text-sm">
+                    </div>
+                </div>
+                <div>
+                    <label class="text-xs font-semibold text-slate-500 block mb-1">Cor da Matéria</label>
+                    <input type="color" x-model="newSubject.color" class="w-full h-10 rounded-xl cursor-pointer">
+                </div>
+            </div>
+            <div class="flex justify-end gap-2 mt-6">
+                <button @click="addSubjectModal = false" class="px-4 py-2 text-xs font-semibold text-slate-500 hover:text-slate-700">Cancelar</button>
+                <button @click="saveSubject()" class="px-4 py-2 bg-brand-600 text-white font-bold text-xs rounded-xl hover:bg-brand-700">Salvar Matéria</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Registrar Tempo Manual -->
+    <div x-show="addTimeModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" x-cloak>
+        <div class="bg-white dark:bg-slate-800 rounded-3xl max-w-md w-full p-6 border border-slate-200 dark:border-slate-700 shadow-2xl">
+            <h3 class="font-bold text-lg mb-4 text-slate-800 dark:text-slate-100">Registrar Tempo Estudado</h3>
+            <div class="space-y-4">
+                <div>
+                    <label class="text-xs font-semibold text-slate-500 block mb-1">Selecione a Matéria *</label>
+                    <select x-model="manualTime.subjectId" class="w-full bg-slate-100 dark:bg-slate-700 border-0 rounded-xl px-3.5 py-2.5 text-sm">
+                        <option value="">Selecione...</option>
+                        <template x-for="subj in subjects" :key="subj.id">
+                            <option :value="subj.id" x-text="subj.name"></option>
+                        </template>
+                    </select>
+                </div>
+                <div>
+                    <label class="text-xs font-semibold text-slate-500 block mb-1">Tempo em Minutos *</label>
+                    <input type="number" x-model="manualTime.minutes" placeholder="Ex: 45, 60, 120" class="w-full bg-slate-100 dark:bg-slate-700 border-0 rounded-xl px-3.5 py-2.5 text-sm">
+                </div>
+            </div>
+            <div class="flex justify-end gap-2 mt-6">
+                <button @click="addTimeModal = false" class="px-4 py-2 text-xs font-semibold text-slate-500">Cancelar</button>
+                <button @click="saveManualTime()" class="px-4 py-2 bg-emerald-600 text-white font-bold text-xs rounded-xl hover:bg-emerald-700">Adicionar Tempo</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Adicionar Videoaula / Link -->
+    <div x-show="addLinkModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" x-cloak>
+        <div class="bg-white dark:bg-slate-800 rounded-3xl max-w-md w-full p-6 border border-slate-200 dark:border-slate-700 shadow-2xl">
+            <h3 class="font-bold text-lg mb-4 text-slate-800 dark:text-slate-100">Nova Videoaula ou Link</h3>
+            <div class="space-y-3">
+                <div>
+                    <label class="text-xs font-semibold text-slate-500 block mb-1">Título do Conteúdo *</label>
+                    <input type="text" x-model="newLink.title" placeholder="Ex: Aula 01 - Geometria Plana" class="w-full bg-slate-100 dark:bg-slate-700 border-0 rounded-xl px-3.5 py-2.5 text-sm">
+                </div>
+                <div>
+                    <label class="text-xs font-semibold text-slate-500 block mb-1">URL / Link *</label>
+                    <input type="url" x-model="newLink.url" placeholder="https://youtube.com/watch?v=..." class="w-full bg-slate-100 dark:bg-slate-700 border-0 rounded-xl px-3.5 py-2.5 text-sm">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="text-xs font-semibold text-slate-500 block mb-1">Matéria *</label>
+                        <select x-model="newLink.subjectId" class="w-full bg-slate-100 dark:bg-slate-700 border-0 rounded-xl px-3.5 py-2.5 text-sm">
+                            <option value="">Selecione...</option>
+                            <template x-for="subj in subjects" :key="subj.id">
+                                <option :value="subj.id" x-text="subj.name"></option>
+                            </template>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-xs font-semibold text-slate-500 block mb-1">Plataforma</label>
+                        <select x-model="newLink.platform" class="w-full bg-slate-100 dark:bg-slate-700 border-0 rounded-xl px-3.5 py-2.5 text-sm">
+                            <option value="YouTube">YouTube</option>
+                            <option value="Drive">Google Drive</option>
+                            <option value="Artigo">Artigo/Site</option>
+                            <option value="Outro">Outro</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label class="text-xs font-semibold text-slate-500 block mb-1">Anotação Curta (opcional)</label>
+                    <input type="text" x-model="newLink.notes" placeholder="Ex: Importante rever a partir dos 10min" class="w-full bg-slate-100 dark:bg-slate-700 border-0 rounded-xl px-3.5 py-2.5 text-sm">
+                </div>
+            </div>
+            <div class="flex justify-end gap-2 mt-6">
+                <button @click="addLinkModal = false" class="px-4 py-2 text-xs font-semibold text-slate-500">Cancelar</button>
+                <button @click="saveLink()" class="px-4 py-2 bg-indigo-600 text-white font-bold text-xs rounded-xl hover:bg-indigo-700">Salvar Link</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Adicionar Tarefa -->
+    <div x-show="addTaskModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" x-cloak>
+        <div class="bg-white dark:bg-slate-800 rounded-3xl max-w-md w-full p-6 border border-slate-200 dark:border-slate-700 shadow-2xl">
+            <h3 class="font-bold text-lg mb-4 text-slate-800 dark:text-slate-100">Nova Tarefa</h3>
+            <div class="space-y-3">
+                <div>
+                    <label class="text-xs font-semibold text-slate-500 block mb-1">Descrição da Tarefa *</label>
+                    <input type="text" x-model="newTask.title" placeholder="Ex: Resolver lista de exercícios 02" class="w-full bg-slate-100 dark:bg-slate-700 border-0 rounded-xl px-3.5 py-2.5 text-sm">
+                </div>
+                <div>
+                    <label class="text-xs font-semibold text-slate-500 block mb-1">Matéria Associada</label>
+                    <select x-model="newTask.subjectId" class="w-full bg-slate-100 dark:bg-slate-700 border-0 rounded-xl px-3.5 py-2.5 text-sm">
+                        <option value="">Geral</option>
+                        <template x-for="subj in subjects" :key="subj.id">
+                            <option :value="subj.id" x-text="subj.name"></option>
+                        </template>
+                    </select>
+                </div>
+            </div>
+            <div class="flex justify-end gap-2 mt-6">
+                <button @click="addTaskModal = false" class="px-4 py-2 text-xs font-semibold text-slate-500">Cancelar</button>
+                <button @click="saveTask()" class="px-4 py-2 bg-brand-600 text-white font-bold text-xs rounded-xl hover:bg-brand-700">Criar Tarefa</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function studyFlowApp() {
+            return {
+                currentTab: 'dashboard',
+                isDark: false,
+                themeColorClass: 'theme-violet',
+
+                // Navegação Menu
+                navItems: [
+                    { id: 'dashboard', label: 'Início', icon: 'layout-dashboard' },
+                    { id: 'subjects', label: 'Matérias & Horas', icon: 'book-open' },
+                    { id: 'links', label: 'Videoaulas & Links', icon: 'video' },
+                    { id: 'tasks', label: 'Tarefas', icon: 'check-square' },
+                    { id: 'focus', label: 'Modo Foco', icon: 'timer' },
+                    { id: 'settings', label: 'Ajustes', icon: 'settings' }
+                ],
+
+                // Coleções de dados zeradas inicialmente
+                subjects: [],
+                videoLinks: [],
+                tasks: [],
+
+                // Timer Pomodoro
+                focusRunning: false,
+                focusSecondsLeft: 1500,
+                focusTimerId: null,
+                focusSubjectId: '',
+
+                // Filtros de Links
+                linkSubjectFilter: 'all',
+                linkStatusFilter: 'all',
+
+                // Estados dos Modais
+                addSubjectModal: false,
+                addTimeModal: false,
+                addLinkModal: false,
+                addTaskModal: false,
+
+                // Objetos de Formulário
+                newSubject: { name: '', teacher: '', currentGrade: '', targetGrade: 10, color: '#8b5cf6' },
+                manualTime: { subjectId: '', minutes: '' },
+                newLink: { title: '', url: '', subjectId: '', platform: 'YouTube', notes: '' },
+                newTask: { title: '', subjectId: '' },
+
+                chartInstance: null,
+
+                initApp() {
+                    this.loadData();
+                    this.$nextTick(() => {
+                        lucide.createIcons();
+                        this.updateChart();
+                    });
+                },
+
+                loadData() {
+                    const saved = localStorage.getItem('studyflow_fresh_data');
+                    if (saved) {
+                        const parsed = JSON.parse(saved);
+                        this.subjects = parsed.subjects || [];
+                        this.videoLinks = parsed.videoLinks || [];
+                        this.tasks = parsed.tasks || [];
+                    }
+                    if (this.subjects.length > 0 && !this.focusSubjectId) {
+                        this.focusSubjectId = this.subjects[0].id;
+                    }
+                },
+
+                saveData() {
+                    const payload = {
+                        subjects: this.subjects,
+                        videoLinks: this.videoLinks,
+                        tasks: this.tasks
+                    };
+                    localStorage.setItem('studyflow_fresh_data', JSON.stringify(payload));
+                    this.updateChart();
+                },
+
+                resetAllDataZero() {
+                    if (confirm("Tem certeza que deseja apagar absolutamente todos os dados e recomeçar do zero?")) {
+                        localStorage.removeItem('studyflow_fresh_data');
+                        this.subjects = [];
+                        this.videoLinks = [];
+                        this.tasks = [];
+                        this.saveData();
+                    }
+                },
+
+                // Matérias e Tempo
+                saveSubject() {
+                    if (!this.newSubject.name.trim()) return;
+                    const id = 'subj_' + Date.now();
+                    this.subjects.push({
+                        id: id,
+                        name: this.newSubject.name,
+                        teacher: this.newSubject.teacher,
+                        currentGrade: parseFloat(this.newSubject.currentGrade) || 0,
+                        targetGrade: parseFloat(this.newSubject.targetGrade) || 10,
+                        color: this.newSubject.color || '#8b5cf6',
+                        studiedMinutes: 0
+                    });
+                    if (!this.focusSubjectId) this.focusSubjectId = id;
+                    this.newSubject = { name: '', teacher: '', currentGrade: '', targetGrade: 10, color: '#8b5cf6' };
+                    this.addSubjectModal = false;
+                    this.saveData();
+                },
+
+                deleteSubject(id) {
+                    this.subjects = this.subjects.filter(s => s.id !== id);
+                    this.videoLinks = this.videoLinks.filter(l => l.subjectId !== id);
+                    this.saveData();
+                },
+
+                quickAddTime(subjectId, minutes) {
+                    const subj = this.subjects.find(s => s.id === subjectId);
+                    if (subj) {
+                        subj.studiedMinutes = (subj.studiedMinutes || 0) + minutes;
+                        this.saveData();
+                    }
+                },
+
+                saveManualTime() {
+                    if (!this.manualTime.subjectId || !this.manualTime.minutes) return;
+                    this.quickAddTime(this.manualTime.subjectId, parseInt(this.manualTime.minutes));
+                    this.manualTime = { subjectId: '', minutes: '' };
+                    this.addTimeModal = false;
+                },
+
+                getTotalStudiedMinutes() {
+                    return this.subjects.reduce((acc, s) => acc + (s.studiedMinutes || 0), 0);
+                },
+
+                formatTotalHours(totalMinutes) {
+                    const h = Math.floor(totalMinutes / 60);
+                    const m = totalMinutes % 60;
+                    return h > 0 ? `${h}h ${m}m` : `${m} min`;
+                },
+
+                // Videoaulas e Links
+                saveLink() {
+                    if (!this.newLink.title.trim() || !this.newLink.url.trim()) return;
+                    this.videoLinks.push({
+                        id: 'link_' + Date.now(),
+                        title: this.newLink.title,
+                        url: this.newLink.url,
+                        subjectId: this.newLink.subjectId,
+                        platform: this.newLink.platform,
+                        notes: this.newLink.notes,
+                        watched: false
+                    });
+                    this.newLink = { title: '', url: '', subjectId: '', platform: 'YouTube', notes: '' };
+                    this.addLinkModal = false;
+                    this.saveData();
+                },
+
+                toggleLinkWatched(item) {
+                    item.watched = !item.watched;
+                    this.saveData();
+                },
+
+                deleteLink(id) {
+                    this.videoLinks = this.videoLinks.filter(l => l.id !== id);
+                    this.saveData();
+                },
+
+                get filteredLinks() {
+                    return this.videoLinks.filter(item => {
+                        const matchSubject = this.linkSubjectFilter === 'all' || item.subjectId === this.linkSubjectFilter;
+                        const matchStatus = this.linkStatusFilter === 'all' || 
+                            (this.linkStatusFilter === 'watched' && item.watched) || 
+                            (this.linkStatusFilter === 'unwatched' && !item.watched);
+                        return matchSubject && matchStatus;
+                    });
+                },
+
+                // Tarefas
+                saveTask() {
+                    if (!this.newTask.title.trim()) return;
+                    this.tasks.push({
+                        id: 'task_' + Date.now(),
+                        title: this.newTask.title,
+                        subjectId: this.newTask.subjectId,
+                        status: 'todo',
+                        done: false
+                    });
+                    this.newTask = { title: '', subjectId: '' };
+                    this.addTaskModal = false;
+                    this.saveData();
+                },
+
+                moveTask(id, newStatus) {
+                    const task = this.tasks.find(t => t.id === id);
+                    if (task) {
+                        task.status = newStatus;
+                        if (newStatus === 'done') task.done = true;
+                        this.saveData();
+                    }
+                },
+
+                deleteTask(id) {
+                    this.tasks = this.tasks.filter(t => t.id !== id);
+                    this.saveData();
+                },
+
+                // Timer Pomodoro
+                toggleFocusTimer() {
+                    this.focusRunning = !this.focusRunning;
+                    if (this.focusRunning) {
+                        this.focusTimerId = setInterval(() => {
+                            if (this.focusSecondsLeft > 0) {
+                                this.focusSecondsLeft--;
+                            } else {
+                                if (this.focusSubjectId) {
+                                    this.quickAddTime(this.focusSubjectId, 25);
+                                }
+                                this.resetFocusTimer();
+                            }
+                        }, 1000);
+                    } else {
+                        clearInterval(this.focusTimerId);
+                    }
+                },
+
+                resetFocusTimer() {
+                    clearInterval(this.focusTimerId);
+                    this.focusRunning = false;
+                    this.focusSecondsLeft = 1500;
+                },
+
+                formatTime(seconds) {
+                    const m = Math.floor(seconds / 60).toString().padStart(2, '0');
+                    const s = (seconds % 60).toString().padStart(2, '0');
+                    return `${m}:${s}`;
+                },
+
+                // Auxiliares
+                getSubjectName(id) {
+                    return this.subjects.find(s => s.id === id)?.name || 'Geral / Outros';
+                },
+
+                toggleTheme() {
+                    this.isDark = !this.isDark;
+                },
+
+                setThemeColor(colorClass) {
+                    this.themeColorClass = colorClass;
+                },
+
+                getTabTitle() {
+                    const item = this.navItems.find(i => i.id === this.currentTab);
+                    return item ? item.label : 'Início';
+                },
+
+                getTabSubtitle() {
+                    return 'Gerencie seus estudos do seu jeito.';
+                },
+
+                updateChart() {
+                    const ctx = document.getElementById('dashboardWeeklyChart');
+                    if (!ctx || this.subjects.length === 0) return;
+
+                    const labels = this.subjects.map(s => s.name);
+                    const data = this.subjects.map(s => s.studiedMinutes || 0);
+                    const colors = this.subjects.map(s => s.color || '#8b5cf6');
+
+                    if (this.chartInstance) {
+                        this.chartInstance.destroy();
+                    }
+
+                    this.chartInstance = new Chart(ctx, {
+                        type: 'bar',
+                        data: {
+                            labels: labels,
+                            datasets: [{
+                                label: 'Minutos Estudados',
+                                data: data,
+                                backgroundColor: colors,
+                                borderRadius: 8
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: { legend: { display: false } }
+                        }
+                    });
+                }
+            }
+        }
+    </script>
+</body>
+</html>
