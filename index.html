@@ -1,871 +1,1055 @@
-<!DOCTYPE html>
-<html lang="pt-BR" class="h-full">
+
+            if (!chartInstance) return;
+
+            const labels = [];
+            const data = [];
+            const colors = [];
+
+            state.subjects.forEach(sub => {
+                const mins = state.sessions.filter(s => s.subjectId === sub.id).reduce((acc, s) => acc + s.minutes, 0);
+                if (mins > 0) {
+                    labels.push(sub.name);
+                    data.push((mins / 60).toFixed(1));
+                    colors.push(sub.color);
+                }
+            });<!DOCTYPE html>
+<html lang="pt-BR" class="h-full bg-slate-950 text-slate-100 antialiased selection:bg-indigo-500 selection:text-white">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>StudyFlow - Plataforma de Estudos</title>
+    
+    <!-- Google Fonts Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- FontAwesome 6 CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
     <script>
         tailwind.config = {
             darkMode: 'class',
             theme: {
                 extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
                     colors: {
-                        brand: {
-                            50: 'var(--color-brand-50, #f5f3ff)',
-                            100: 'var(--color-brand-100, #ede9fe)',
-                            500: 'var(--color-brand-500, #8b5cf6)',
-                            600: 'var(--color-brand-600, #7c3aed)',
-                            700: 'var(--color-brand-700, #6d28d9)',
+                        slate: {
+                            950: '#090d16',
+                            900: '#0f172a',
+                            850: '#141e33',
+                            800: '#1e293b',
+                            700: '#334155',
                         }
+                    },
+                    boxShadow: {
+                        'glow': '0 0 25px -5px rgba(99, 102, 241, 0.25)',
+                        'glow-amber': '0 0 25px -5px rgba(245, 158, 11, 0.25)',
+                        'glow-emerald': '0 0 25px -5px rgba(16, 185, 129, 0.25)',
+                        'glass': '0 8px 32px 0 rgba(0, 0, 0, 0.37)',
                     }
                 }
             }
         }
     </script>
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
-        body { font-family: 'Inter', sans-serif; }
-        [x-cloak] { display: none !important; }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.6);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(51, 65, 85, 0.6);
+            border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(99, 102, 241, 0.8);
+        }
+
+        /* Glassmorphism Styles */
+        .glass-card {
+            background: rgba(15, 23, 42, 0.7);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.07);
+        }
         
-        .theme-violet { --color-brand-50: #f5f3ff; --color-brand-100: #ede9fe; --color-brand-500: #8b5cf6; --color-brand-600: #7c3aed; --color-brand-700: #6d28d9; }
-        .theme-blue { --color-brand-50: #eff6ff; --color-brand-100: #dbeafe; --color-brand-500: #3b82f6; --color-brand-600: #2563eb; --color-brand-700: #1d4ed8; }
-        .theme-emerald { --color-brand-50: #ecfdf5; --color-brand-100: #d1fae5; --color-brand-500: #10b981; --color-brand-600: #059669; --color-brand-700: #047857; }
-        .theme-orange { --color-brand-50: #fff7ed; --color-brand-100: #ffedd5; --color-brand-500: #f97316; --color-brand-600: #ea580c; --color-brand-700: #c2410c; }
-        .theme-rose { --color-brand-50: #fff1f2; --color-brand-100: #ffe4e6; --color-brand-500: #f43f5e; --color-brand-600: #e11d48; --color-brand-700: #be123c; }
+        .glass-card-hover {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .glass-card-hover:hover {
+            background: rgba(20, 30, 51, 0.85);
+            border-color: rgba(99, 102, 241, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .glass-nav {
+            background: rgba(9, 13, 22, 0.85);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+
+        /* Gradient Text */
+        .gradient-text {
+            background: linear-gradient(135deg, #a5b4fc 0%, #6366f1 50%, #c084fc 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* Pulse glow animation */
+        @keyframes subtle-pulse {
+            0%, 100% { opacity: 0.4; }
+            50% { opacity: 0.8; }
+        }
+        .animate-glow {
+            animation: subtle-pulse 4s infinite ease-in-out;
+        }
+
+        .tab-content {
+            animation: fadeIn 0.3s ease-out forwards;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
     </style>
 </head>
-<body class="h-full bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 transition-colors duration-200"
-      x-data="studyFlowApp()" 
-      x-init="initApp()" 
-      :class="[themeColorClass, isDark ? 'dark' : '']">
+<body class="h-full bg-slate-950 text-slate-100 flex flex-col md:flex-row overflow-hidden font-sans">
 
-    <div class="min-h-full flex flex-col md:flex-row">
-        <!-- Sidebar Desktop -->
-        <aside class="hidden md:flex md:w-64 md:flex-col bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 p-4 justify-between sticky top-0 h-screen overflow-y-auto">
-            <div>
-                <div class="flex items-center gap-3 px-2 py-3 mb-6 border-b border-slate-100 dark:border-slate-700">
-                    <div class="w-10 h-10 rounded-xl bg-brand-600 text-white flex items-center justify-center font-extrabold text-xl shadow-lg shadow-brand-500/30">
-                        SF
-                    </div>
-                    <div>
-                        <h1 class="font-bold text-lg leading-none tracking-tight">StudyFlow</h1>
-                        <span class="text-xs text-slate-400">Do Zero à Aprovação</span>
-                    </div>
-                </div>
+    <!-- TOAST NOTIFICATION CONTAINER -->
+    <div id="toastContainer" class="fixed top-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
 
-                <nav class="space-y-1">
-                    <template x-for="item in navItems" :key="item.id">
-                        <button @click="currentTab = item.id" 
-                                :class="currentTab === item.id ? 'bg-brand-50 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400 font-semibold' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700/50'"
-                                class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all">
-                            <i :data-lucide="item.icon" class="w-5 h-5"></i>
-                            <span x-text="item.label"></span>
+    <!-- BACKGROUND GLOW EFFECTS -->
+    <div class="fixed top-0 left-1/4 w-96 h-96 bg-indigo-600/10 rounded-full blur-[120px] pointer-events-none animate-glow"></div>
+    <div class="fixed bottom-0 right-1/4 w-96 h-96 bg-purple-600/10 rounded-full blur-[120px] pointer-events-none animate-glow" style="animation-delay: 2s;"></div>
+
+    <!-- MAIN WRAPPER -->
+    <div class="flex flex-col md:flex-row w-full h-full z-10 overflow-hidden">
+
+        <!-- SIDEBAR NAVIGATION -->
+        <aside class="w-full md:w-72 glass-nav border-b md:border-b-0 md:border-r border-slate-800/80 flex md:flex-col justify-between shrink-0 z-20">
+            <div class="flex flex-col h-full justify-between">
+                <div>
+                    <!-- LOGO -->
+                    <div class="p-5 md:p-6 flex items-center justify-between border-b border-slate-800/60">
+                        <div class="flex items-center gap-3.5">
+                            <div class="w-11 h-11 rounded-2xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-violet-500 flex items-center justify-center text-white shadow-glow font-extrabold text-xl tracking-wider">
+                                SF
+                            </div>
+                            <div>
+                                <h1 class="font-extrabold text-xl tracking-tight leading-tight gradient-text">StudyFlow</h1>
+                                <span class="text-[11px] text-slate-400 font-medium tracking-wide">Plataforma de Estudos</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- NAV MENU -->
+                    <nav class="p-3.5 space-y-1.5 overflow-x-auto flex md:flex-col horizontal-scroll md:overflow-visible">
+                        <button onclick="switchTab('dashboard')" id="nav-dashboard" class="nav-btn active w-full flex items-center gap-3.5 px-4 py-3 rounded-xl text-sm font-semibold transition-all text-slate-300 hover:text-white hover:bg-slate-800/60 shrink-0">
+                            <i class="fa-solid fa-chart-pie text-lg w-6 text-center text-indigo-400"></i>
+                            <span>Dashboard</span>
                         </button>
-                    </template>
-                </nav>
-            </div>
+                        <button onclick="switchTab('subjects')" id="nav-subjects" class="nav-btn w-full flex items-center gap-3.5 px-4 py-3 rounded-xl text-sm font-semibold transition-all text-slate-400 hover:text-white hover:bg-slate-800/60 shrink-0">
+                            <i class="fa-solid fa-book-bookmark text-lg w-6 text-center text-emerald-400"></i>
+                            <span>Matérias</span>
+                        </button>
+                        <button onclick="switchTab('notes')" id="nav-notes" class="nav-btn w-full flex items-center gap-3.5 px-4 py-3 rounded-xl text-sm font-semibold transition-all text-slate-400 hover:text-white hover:bg-slate-800/60 shrink-0">
+                            <i class="fa-solid fa-note-sticky text-lg w-6 text-center text-amber-400"></i>
+                            <span>Caderno de Notas</span>
+                        </button>
+                        <button onclick="switchTab('timer')" id="nav-timer" class="nav-btn w-full flex items-center gap-3.5 px-4 py-3 rounded-xl text-sm font-semibold transition-all text-slate-400 hover:text-white hover:bg-slate-800/60 shrink-0">
+                            <i class="fa-solid fa-stopwatch text-lg w-6 text-center text-cyan-400"></i>
+                            <span>Modo Pomodoro</span>
+                        </button>
+                        <button onclick="switchTab('videos')" id="nav-videos" class="nav-btn w-full flex items-center gap-3.5 px-4 py-3 rounded-xl text-sm font-semibold transition-all text-slate-400 hover:text-white hover:bg-slate-800/60 shrink-0">
+                            <i class="fa-solid fa-circle-play text-lg w-6 text-center text-rose-400"></i>
+                            <span>Videoaulas & Links</span>
+                        </button>
+                        <button onclick="switchTab('tasks')" id="nav-tasks" class="nav-btn w-full flex items-center gap-3.5 px-4 py-3 rounded-xl text-sm font-semibold transition-all text-slate-400 hover:text-white hover:bg-slate-800/60 shrink-0">
+                            <i class="fa-solid fa-list-check text-lg w-6 text-center text-purple-400"></i>
+                            <span>Tarefas</span>
+                        </button>
+                        <button onclick="switchTab('schedule')" id="nav-schedule" class="nav-btn w-full flex items-center gap-3.5 px-4 py-3 rounded-xl text-sm font-semibold transition-all text-slate-400 hover:text-white hover:bg-slate-800/60 shrink-0">
+                            <i class="fa-solid fa-calendar-days text-lg w-6 text-center text-blue-400"></i>
+                            <span>Agenda & Provas</span>
+                        </button>
+                    </nav>
+                </div>
 
-            <!-- Card de Progresso Geral -->
-            <div class="bg-slate-50 dark:bg-slate-900/60 p-3.5 rounded-2xl border border-slate-200/80 dark:border-slate-700/80">
-                <div class="flex justify-between items-center text-xs mb-1.5 font-medium">
-                    <span class="text-slate-500 dark:text-slate-400">Total Estudado</span>
-                    <span class="text-brand-600 dark:text-brand-400 font-bold" x-text="formatTotalHours(getTotalStudiedMinutes())"></span>
-                </div>
-                <div class="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2 overflow-hidden">
-                    <div class="bg-brand-500 h-2 rounded-full transition-all duration-300" :style="`width: ${Math.min(100, (getTotalStudiedMinutes()/600)*100)}%`"></div>
-                </div>
-                <div class="mt-2.5 pt-2 border-t border-slate-200/50 dark:border-slate-700/50 flex justify-between items-center text-xs text-slate-500 dark:text-slate-400">
-                    <span class="flex items-center gap-1">📚 <span class="font-bold text-slate-700 dark:text-slate-200" x-text="subjects.length"></span> matérias</span>
-                    <button @click="currentTab = 'settings'" class="hover:text-brand-600 dark:hover:text-brand-400 flex items-center gap-1">
-                        <i data-lucide="settings" class="w-3.5 h-3.5"></i> Perfil
+                <!-- FOOTER QUICK ACTIONS -->
+                <div class="hidden md:block p-4 border-t border-slate-800/60">
+                    <button onclick="openSessionModal()" class="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-semibold text-xs tracking-wider uppercase transition-all shadow-glow flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-plus"></i> Registrar Estudo
                     </button>
                 </div>
             </div>
         </aside>
 
-        <!-- Main Content Area -->
-        <main class="flex-1 pb-24 md:pb-8 p-4 md:p-8 max-w-7xl mx-auto w-full">
-            <!-- Header Superior -->
-            <div class="flex justify-between items-center mb-6">
-                <div>
-                    <h2 class="text-2xl font-bold tracking-tight" x-text="getTabTitle()"></h2>
-                    <p class="text-xs md:text-sm text-slate-500 dark:text-slate-400" x-text="getTabSubtitle()"></p>
-                </div>
-                <div class="flex items-center gap-2">
-                    <button @click="currentTab = 'focus'" class="bg-brand-600 hover:bg-brand-700 text-white px-3.5 py-2 rounded-xl text-xs md:text-sm font-semibold flex items-center gap-2 shadow-sm transition-transform active:scale-95">
-                        <i data-lucide="play-circle" class="w-4 h-4"></i>
-                        <span>Estudar Agora</span>
-                    </button>
-                    <button @click="toggleTheme()" class="p-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700">
-                        <i x-show="!isDark" data-lucide="moon" class="w-4 h-4"></i>
-                        <i x-show="isDark" data-lucide="sun" class="w-4 h-4"></i>
-                    </button>
-                </div>
-            </div>
+        <!-- MAIN CONTENT AREA -->
+        <main class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
 
-            <!-- 1. DASHBOARD INÍCIO -->
-            <div x-show="currentTab === 'dashboard'" class="space-y-6">
-                <!-- Banner Boas Vindas -->
-                <div class="bg-gradient-to-r from-brand-600 to-brand-700 rounded-3xl p-6 text-white shadow-xl shadow-brand-500/10 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 relative overflow-hidden">
-                    <div>
-                        <span class="inline-block px-3 py-1 bg-white/20 backdrop-blur-md rounded-full text-xs font-medium mb-3">👋 Bem-vindo ao StudyFlow</span>
-                        <h3 class="text-2xl md:text-3xl font-extrabold mb-1">Seu painel totalmente em branco</h3>
-                        <p class="text-brand-100 text-sm max-w-lg">Cadastre suas primeiras matérias e adicione horas estudadas ou videoaulas para acompanhar seu progresso.</p>
+            <!-- TAB 1: DASHBOARD -->
+            <section id="tab-dashboard" class="tab-content space-y-6 max-w-7xl mx-auto">
+                <!-- HEADER BANNER -->
+                <div class="glass-card rounded-3xl p-6 sm:p-8 relative overflow-hidden flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+                    <div class="space-y-2 relative z-10 max-w-xl">
+                        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-xs font-semibold">
+                            <span class="w-2 h-2 rounded-full bg-indigo-400 animate-ping"></span> Painel de Controle
+                        </div>
+                        <h2 class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">Bem-vindo ao seu espaço de estudos!</h2>
+                        <p class="text-slate-400 text-xs sm:text-sm leading-relaxed">Acompanhe seu tempo de foco, organize suas tarefas e mantenha suas anotações sempre atualizadas.</p>
                     </div>
-                    <button @click="addSubjectModal = true" class="bg-white text-brand-700 font-bold px-4 py-2.5 rounded-2xl text-xs hover:bg-brand-50 transition shadow-md flex items-center gap-2 whitespace-nowrap">
-                        <i data-lucide="plus" class="w-4 h-4"></i> Cadastrar Matéria
-                    </button>
-                </div>
-
-                <!-- Resumo Rápido Cards -->
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div class="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-700/80">
-                        <div class="text-xs font-medium text-slate-500 mb-1">Matérias Ativas</div>
-                        <div class="font-bold text-2xl text-slate-800 dark:text-slate-100" x-text="subjects.length"></div>
-                        <div class="text-xs text-brand-600 font-semibold mt-0.5" x-text="subjects.length === 0 ? 'Nenhuma cadastrada' : 'Cadastradas'"></div>
-                    </div>
-                    <div class="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-700/80">
-                        <div class="text-xs font-medium text-slate-500 mb-1">Horas Estudo Total</div>
-                        <div class="font-bold text-2xl text-slate-800 dark:text-slate-100" x-text="formatTotalHours(getTotalStudiedMinutes())"></div>
-                        <div class="text-xs text-emerald-500 font-medium mt-0.5">Tempo registrado</div>
-                    </div>
-                    <div class="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-700/80">
-                        <div class="text-xs font-medium text-slate-500 mb-1">Videoaulas / Links</div>
-                        <div class="font-bold text-2xl text-slate-800 dark:text-slate-100" x-text="videoLinks.length"></div>
-                        <div class="text-xs text-indigo-500 font-medium mt-0.5" x-text="`${videoLinks.filter(l => l.watched).length} assistidas`"></div>
-                    </div>
-                    <div class="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-700/80">
-                        <div class="text-xs font-medium text-slate-500 mb-1">Tarefas Pendentes</div>
-                        <div class="font-bold text-2xl text-slate-800 dark:text-slate-100" x-text="tasks.filter(t => !t.done).length"></div>
-                        <div class="text-xs text-amber-500 font-medium mt-0.5" x-text="`${tasks.filter(t => t.done).length} concluídas`"></div>
+                    <div class="flex flex-wrap gap-3 relative z-10">
+                        <button onclick="openNoteModal()" class="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold transition-all border border-slate-700/60 flex items-center gap-2">
+                            <i class="fa-solid fa-plus text-amber-400"></i> Nova Nota
+                        </button>
+                        <button onclick="openSessionModal()" class="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold transition-all shadow-glow flex items-center gap-2">
+                            <i class="fa-solid fa-play"></i> Iniciar Estudo
+                        </button>
                     </div>
                 </div>
 
-                <!-- Gráfico de Horas por Matéria e Lista de Atalhos -->
+                <!-- METRICS GRID -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div class="glass-card glass-card-hover rounded-2xl p-5 flex items-center justify-between">
+                        <div>
+                            <span class="text-xs font-medium text-slate-400 block mb-1">Horas Totais</span>
+                            <h3 id="dashTotalHours" class="text-2xl font-black text-white">0.0h</h3>
+                        </div>
+                        <div class="w-12 h-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
+                            <i class="fa-solid fa-clock text-xl"></i>
+                        </div>
+                    </div>
+
+                    <div class="glass-card glass-card-hover rounded-2xl p-5 flex items-center justify-between">
+                        <div>
+                            <span class="text-xs font-medium text-slate-400 block mb-1">Sessões Realizadas</span>
+                            <h3 id="dashTotalSessions" class="text-2xl font-black text-white">0</h3>
+                        </div>
+                        <div class="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+                            <i class="fa-solid fa-fire text-xl"></i>
+                        </div>
+                    </div>
+
+                    <div class="glass-card glass-card-hover rounded-2xl p-5 flex items-center justify-between">
+                        <div>
+                            <span class="text-xs font-medium text-slate-400 block mb-1">Tarefas Concluídas</span>
+                            <h3 id="dashCompletedTasks" class="text-2xl font-black text-white">0/0</h3>
+                        </div>
+                        <div class="w-12 h-12 rounded-2xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400">
+                            <i class="fa-solid fa-check-double text-xl"></i>
+                        </div>
+                    </div>
+
+                    <div class="glass-card glass-card-hover rounded-2xl p-5 flex items-center justify-between">
+                        <div>
+                            <span class="text-xs font-medium text-slate-400 block mb-1">Caderno de Notas</span>
+                            <h3 id="dashTotalNotes" class="text-2xl font-black text-white">0</h3>
+                        </div>
+                        <div class="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
+                            <i class="fa-solid fa-book-open text-xl"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CHARTS & RECENT CONTENT SECTION -->
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <div class="lg:col-span-2 bg-white dark:bg-slate-800 p-6 rounded-3xl border border-slate-200/80 dark:border-slate-700/80">
-                        <h4 class="font-bold text-slate-800 dark:text-slate-100 mb-4 flex items-center justify-between">
-                            <span>Distribuição do Tempo de Estudo por Matéria</span>
-                            <span class="text-xs text-slate-400 font-normal">Minutos estudados</span>
-                        </h4>
-                        <div class="h-64 flex items-center justify-center">
-                            <template x-if="subjects.length === 0">
-                                <div class="text-center text-slate-400 text-xs">
-                                    <i data-lucide="bar-chart-2" class="w-10 h-10 mx-auto mb-2 opacity-50"></i>
-                                    Cadastre matérias para visualizar seu gráfico de estudos.
-                                </div>
-                            </template>
-                            <canvas id="dashboardWeeklyChart" x-show="subjects.length > 0"></canvas>
+                    <div class="lg:col-span-2 glass-card rounded-2xl p-6 space-y-4">
+                        <div class="flex items-center justify-between">
+                            <h3 class="text-base font-bold text-white flex items-center gap-2">
+                                <i class="fa-solid fa-chart-line text-indigo-400"></i> Distribuição por Matéria
+                            </h3>
+                            <span class="text-xs text-slate-500">Tempo Estudado</span>
+                        </div>
+                        <div class="relative h-64 w-full flex items-center justify-center">
+                            <canvas id="subjectChart"></canvas>
                         </div>
                     </div>
 
-                    <div class="bg-white dark:bg-slate-800 p-6 rounded-3xl border border-slate-200/80 dark:border-slate-700/80">
-                        <h4 class="font-bold text-slate-800 dark:text-slate-100 mb-4">Ações Rápidas</h4>
-                        <div class="space-y-3">
-                            <button @click="addSubjectModal = true" class="w-full p-3 bg-slate-50 dark:bg-slate-700/40 hover:bg-slate-100 rounded-2xl flex items-center gap-3 text-xs font-semibold text-slate-700 dark:text-slate-200 transition">
-                                <div class="p-2 bg-brand-100 text-brand-600 rounded-xl"><i data-lucide="book-open" class="w-4 h-4"></i></div>
-                                Cadastrar Matéria
-                            </button>
-                            <button @click="addTimeModal = true" class="w-full p-3 bg-slate-50 dark:bg-slate-700/40 hover:bg-slate-100 rounded-2xl flex items-center gap-3 text-xs font-semibold text-slate-700 dark:text-slate-200 transition">
-                                <div class="p-2 bg-emerald-100 text-emerald-600 rounded-xl"><i data-lucide="clock" class="w-4 h-4"></i></div>
-                                Registrar Tempo Manual
-                            </button>
-                            <button @click="addLinkModal = true" class="w-full p-3 bg-slate-50 dark:bg-slate-700/40 hover:bg-slate-100 rounded-2xl flex items-center gap-3 text-xs font-semibold text-slate-700 dark:text-slate-200 transition">
-                                <div class="p-2 bg-indigo-100 text-indigo-600 rounded-xl"><i data-lucide="video" class="w-4 h-4"></i></div>
-                                Adicionar Videoaula / Link
-                            </button>
-                            <button @click="addTaskModal = true" class="w-full p-3 bg-slate-50 dark:bg-slate-700/40 hover:bg-slate-100 rounded-2xl flex items-center gap-3 text-xs font-semibold text-slate-700 dark:text-slate-200 transition">
-                                <div class="p-2 bg-amber-100 text-amber-600 rounded-xl"><i data-lucide="check-square" class="w-4 h-4"></i></div>
-                                Criar Nova Tarefa
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 2. MATÉRIAS & ADIÇÃO DE TEMPO -->
-            <div x-show="currentTab === 'subjects'" class="space-y-6">
-                <div class="flex flex-wrap justify-between items-center gap-4 bg-white dark:bg-slate-800 p-4 rounded-3xl border border-slate-200/80 dark:border-slate-700/80">
-                    <h3 class="font-bold text-slate-800 dark:text-slate-100 text-lg">Minhas Matérias e Tempo Estudado</h3>
-                    <div class="flex items-center gap-2">
-                        <button @click="addTimeModal = true" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 shadow-sm">
-                            <i data-lucide="clock" class="w-4 h-4"></i> Registrar Tempo
-                        </button>
-                        <button @click="addSubjectModal = true" class="bg-brand-600 hover:bg-brand-700 text-white px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 shadow-sm">
-                            <i data-lucide="plus" class="w-4 h-4"></i> Nova Matéria
-                        </button>
-                    </div>
-                </div>
-
-                <template x-if="subjects.length === 0">
-                    <div class="bg-white dark:bg-slate-800 p-12 rounded-3xl border border-slate-200/80 dark:border-slate-700/80 text-center max-w-md mx-auto">
-                        <div class="w-16 h-16 bg-brand-50 dark:bg-brand-900/30 text-brand-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <i data-lucide="book-open" class="w-8 h-8"></i>
-                        </div>
-                        <h4 class="font-bold text-slate-800 dark:text-slate-100 text-lg mb-1">Nenhuma matéria cadastrada</h4>
-                        <p class="text-xs text-slate-400 mb-6">Comece adicionando as disciplinas que você estuda (ex: Matemática, História, Código, Inglês...).</p>
-                        <button @click="addSubjectModal = true" class="bg-brand-600 text-white px-4 py-2.5 rounded-xl text-xs font-bold shadow-md hover:bg-brand-700">
-                            Adicionar Primeira Matéria
-                        </button>
-                    </div>
-                </template>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" x-show="subjects.length > 0">
-                    <template x-for="subject in subjects" :key="subject.id">
-                        <div class="bg-white dark:bg-slate-800 p-5 rounded-3xl border border-slate-200/80 dark:border-slate-700/80 relative overflow-hidden flex flex-col justify-between">
-                            <div class="w-2 h-full absolute left-0 top-0" :style="`background-color: ${subject.color}`"></div>
-                            <div>
-                                <div class="flex justify-between items-start mb-2 pl-2">
-                                    <div>
-                                        <h4 class="font-bold text-base text-slate-800 dark:text-slate-100" x-text="subject.name"></h4>
-                                        <p class="text-xs text-slate-400" x-text="subject.teacher ? `Prof. ${subject.teacher}` : 'Sem prof. atribuído'"></p>
-                                    </div>
-                                    <button @click="deleteSubject(subject.id)" class="text-slate-300 hover:text-red-500 p-1">
-                                        <i data-lucide="trash-2" class="w-4 h-4"></i>
-                                    </button>
-                                </div>
-
-                                <div class="pl-2 mt-4 space-y-2">
-                                    <div class="flex justify-between text-xs text-slate-500">
-                                        <span>Tempo Estudado:</span>
-                                        <strong class="text-slate-800 dark:text-slate-200" x-text="formatTotalHours(subject.studiedMinutes || 0)"></strong>
-                                    </div>
-                                    <div class="flex justify-between text-xs text-slate-500">
-                                        <span>Nota Atual / Meta:</span>
-                                        <strong class="text-brand-600" x-text="`${subject.currentGrade || 0} / ${subject.targetGrade || 10}`"></strong>
-                                    </div>
-                                </div>
+                    <!-- RECENT NOTES WIDGET -->
+                    <div class="glass-card rounded-2xl p-6 space-y-4 flex flex-col justify-between">
+                        <div>
+                            <div class="flex items-center justify-between mb-4">
+                                <h3 class="text-base font-bold text-white flex items-center gap-2">
+                                    <i class="fa-solid fa-note-sticky text-amber-400"></i> Últimas Anotações
+                                </h3>
+                                <button onclick="switchTab('notes')" class="text-xs text-indigo-400 hover:underline">Ver tudo</button>
                             </div>
-
-                            <div class="mt-6 pt-4 border-t border-slate-100 dark:border-slate-700/60 flex items-center justify-between gap-2 pl-2">
-                                <button @click="quickAddTime(subject.id, 30)" class="flex-1 py-1.5 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:bg-brand-50 hover:text-brand-600 rounded-xl text-xs font-semibold transition">
-                                    +30 min
-                                </button>
-                                <button @click="quickAddTime(subject.id, 60)" class="flex-1 py-1.5 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:bg-brand-50 hover:text-brand-600 rounded-xl text-xs font-semibold transition">
-                                    +1 hora
-                                </button>
+                            <div id="dashRecentNotes" class="space-y-3">
+                                <!-- Dynamic recent notes -->
                             </div>
                         </div>
-                    </template>
-                </div>
-            </div>
-
-            <!-- 3. NOVA ABA: VIDEOAULAS & LINKS DEDICADOS -->
-            <div x-show="currentTab === 'links'" class="space-y-6">
-                <div class="flex flex-wrap justify-between items-center gap-4 bg-white dark:bg-slate-800 p-4 rounded-3xl border border-slate-200/80 dark:border-slate-700/80">
-                    <div class="flex items-center gap-2">
-                        <button @click="addLinkModal = true" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 shadow-sm">
-                            <i data-lucide="plus" class="w-4 h-4"></i> Adicionar Videoaula / Link
+                        <button onclick="openNoteModal()" class="w-full mt-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700/80 text-slate-200 text-xs font-semibold transition-all border border-slate-700/50 flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-plus text-amber-400"></i> Criar Nova Anotação
                         </button>
                     </div>
-                    <div class="flex items-center gap-2">
-                        <select x-model="linkSubjectFilter" class="bg-slate-100 dark:bg-slate-700 text-xs rounded-xl px-3 py-2 border-0">
-                            <option value="all">Todas as Matérias</option>
-                            <template x-for="subj in subjects" :key="subj.id">
-                                <option :value="subj.id" x-text="subj.name"></option>
-                            </template>
-                        </select>
-                        <select x-model="linkStatusFilter" class="bg-slate-100 dark:bg-slate-700 text-xs rounded-xl px-3 py-2 border-0">
-                            <option value="all">Todos os Status</option>
-                            <option value="unwatched">A Assistir</option>
-                            <option value="watched">Assistidos</option>
-                        </select>
-                    </div>
                 </div>
+            </section>
 
-                <template x-if="filteredLinks.length === 0">
-                    <div class="bg-white dark:bg-slate-800 p-12 rounded-3xl border border-slate-200/80 dark:border-slate-700/80 text-center max-w-md mx-auto">
-                        <div class="w-16 h-16 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <i data-lucide="youtube" class="w-8 h-8"></i>
-                        </div>
-                        <h4 class="font-bold text-slate-800 dark:text-slate-100 text-lg mb-1">Nenhuma videoaula salva</h4>
-                        <p class="text-xs text-slate-400 mb-6">Salve links de aulas do YouTube, PDFs do Drive ou artigos para estudar depois.</p>
-                        <button @click="addLinkModal = true" class="bg-indigo-600 text-white px-4 py-2.5 rounded-xl text-xs font-bold shadow-md hover:bg-indigo-700">
-                            Adicionar Novo Link
-                        </button>
+            <!-- TAB 2: MATÉRIAS -->
+            <section id="tab-subjects" class="tab-content hidden space-y-6 max-w-7xl mx-auto">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <div>
+                        <h2 class="text-2xl font-black text-white flex items-center gap-2">
+                            <i class="fa-solid fa-book-bookmark text-emerald-400"></i> Minhas Matérias
+                        </h2>
+                        <p class="text-xs text-slate-400">Cadastre as disciplinas que deseja acompanhar e organizar</p>
                     </div>
-                </template>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" x-show="filteredLinks.length > 0">
-                    <template x-for="item in filteredLinks" :key="item.id">
-                        <div class="bg-white dark:bg-slate-800 p-5 rounded-3xl border border-slate-200/80 dark:border-slate-700/80 flex flex-col justify-between space-y-4">
-                            <div>
-                                <div class="flex items-center justify-between mb-2">
-                                    <span class="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-md"
-                                          :class="item.platform === 'YouTube' ? 'bg-red-100 text-red-600' : (item.platform === 'Drive' ? 'bg-blue-100 text-blue-600' : 'bg-slate-100 text-slate-600')"
-                                          x-text="item.platform"></span>
-                                    <span class="text-xs font-semibold px-2 py-0.5 rounded-full"
-                                          :class="item.watched ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'"
-                                          x-text="item.watched ? 'Assistido ✓' : 'A Assistir'"></span>
-                                </div>
-                                <h4 class="font-bold text-sm text-slate-800 dark:text-slate-100 line-clamp-2" x-text="item.title"></h4>
-                                <p class="text-xs text-slate-400 mt-1" x-text="getSubjectName(item.subjectId)"></p>
-                                <p x-show="item.notes" class="text-xs text-slate-500 bg-slate-50 dark:bg-slate-700/40 p-2 rounded-xl mt-3" x-text="item.notes"></p>
-                            </div>
-
-                            <div class="pt-3 border-t border-slate-100 dark:border-slate-700 flex items-center justify-between gap-2">
-                                <button @click="toggleLinkWatched(item)" class="text-xs font-semibold px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 text-slate-600 dark:text-slate-300">
-                                    <span x-text="item.watched ? 'Marcar Pendente' : 'Marcar Concluído'"></span>
-                                </button>
-                                <div class="flex items-center gap-1">
-                                    <a :href="item.url" target="_blank" class="p-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition flex items-center gap-1 text-xs font-medium">
-                                        <span>Abrir</span>
-                                        <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
-                                    </a>
-                                    <button @click="deleteLink(item.id)" class="p-2 text-slate-300 hover:text-red-500 rounded-xl">
-                                        <i data-lucide="trash-2" class="w-4 h-4"></i>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </template>
-                </div>
-            </div>
-
-            <!-- 4. QUADRO DE TAREFAS -->
-            <div x-show="currentTab === 'tasks'" class="space-y-6">
-                <div class="flex justify-between items-center bg-white dark:bg-slate-800 p-4 rounded-3xl border border-slate-200/80 dark:border-slate-700/80">
-                    <h3 class="font-bold text-slate-800 dark:text-slate-100 text-lg">Tarefas de Estudo</h3>
-                    <button @click="addTaskModal = true" class="bg-brand-600 text-white px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2">
-                        <i data-lucide="plus" class="w-4 h-4"></i> Criar Tarefa
+                    <button onclick="openSubjectModal()" class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-xl text-xs shadow-glow-emerald transition-all flex items-center gap-2">
+                        <i class="fa-solid fa-plus"></i> Adicionar Matéria
                     </button>
                 </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <!-- A Fazer -->
-                    <div class="bg-slate-100 dark:bg-slate-800/50 p-4 rounded-3xl border border-slate-200/60 dark:border-slate-700/60">
-                        <h4 class="font-bold text-slate-700 dark:text-slate-300 text-sm mb-3 flex items-center justify-between">
-                            <span>📌 A FAZER</span>
-                            <span class="bg-slate-200 dark:bg-slate-700 text-xs px-2 py-0.5 rounded-full" x-text="tasks.filter(t => t.status === 'todo').length"></span>
-                        </h4>
-                        <div class="space-y-3">
-                            <template x-for="task in tasks.filter(t => t.status === 'todo')" :key="task.id">
-                                <div class="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-700 shadow-sm">
-                                    <div class="font-semibold text-sm text-slate-800 dark:text-slate-100" x-text="task.title"></div>
-                                    <span class="text-[10px] text-brand-600 font-bold" x-text="getSubjectName(task.subjectId)"></span>
-                                    <div class="flex justify-between items-center mt-3 pt-2 border-t border-slate-100 dark:border-slate-700/60 text-xs">
-                                        <button @click="deleteTask(task.id)" class="text-slate-300 hover:text-red-500"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
-                                        <button @click="moveTask(task.id, 'done')" class="text-brand-600 font-semibold">Concluir ✓</button>
-                                    </div>
-                                </div>
-                            </template>
-                        </div>
-                    </div>
+                <div id="subjectsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <!-- Dynamic Subjects Render -->
+                </div>
+            </section>
 
-                    <!-- Concluídas -->
-                    <div class="bg-slate-100 dark:bg-slate-800/50 p-4 rounded-3xl border border-slate-200/60 dark:border-slate-700/60 md:col-span-2">
-                        <h4 class="font-bold text-emerald-600 text-sm mb-3 flex items-center justify-between">
-                            <span>✅ CONCLUÍDAS</span>
-                            <span class="bg-emerald-100 text-emerald-700 text-xs px-2 py-0.5 rounded-full" x-text="tasks.filter(t => t.status === 'done').length"></span>
-                        </h4>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                            <template x-for="task in tasks.filter(t => t.status === 'done')" :key="task.id">
-                                <div class="bg-white dark:bg-slate-800 p-3 rounded-2xl border border-slate-200/80 dark:border-slate-700 opacity-75 flex justify-between items-center">
-                                    <span class="font-medium text-xs line-through text-slate-500" x-text="task.title"></span>
-                                    <button @click="deleteTask(task.id)" class="text-slate-300 hover:text-red-500"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
-                                </div>
-                            </template>
-                        </div>
+            <!-- TAB 3: CADERNO DE NOTAS -->
+            <section id="tab-notes" class="tab-content hidden space-y-6 max-w-7xl mx-auto">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <div>
+                        <h2 class="text-2xl font-black text-white flex items-center gap-2">
+                            <i class="fa-solid fa-note-sticky text-amber-400"></i> Caderno de Anotações
+                        </h2>
+                        <p class="text-xs text-slate-400">Resumos, rascunhos, fórmulas e anotações organizadas</p>
+                    </div>
+                    <button onclick="openNoteModal()" class="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl text-xs shadow-glow transition-all flex items-center gap-2">
+                        <i class="fa-solid fa-plus"></i> Nova Anotação
+                    </button>
+                </div>
+
+                <!-- FILTER BAR -->
+                <div class="glass-card rounded-2xl p-4 flex flex-col md:flex-row items-center justify-between gap-4">
+                    <div class="relative w-full md:w-80">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 text-xs"></i>
+                        <input type="text" id="noteSearchInput" oninput="renderNotes()" placeholder="Buscar anotações..." class="w-full bg-slate-950/80 border border-slate-800 rounded-xl pl-9 pr-4 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
+                    </div>
+                    <div class="flex flex-wrap items-center gap-3 w-full md:w-auto">
+                        <select id="noteFilterSubject" onchange="renderNotes()" class="bg-slate-950/80 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-300 focus:outline-none focus:border-indigo-500">
+                            <option value="all">Todas as Matérias</option>
+                        </select>
+                        <select id="noteFilterCategory" onchange="renderNotes()" class="bg-slate-950/80 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-300 focus:outline-none focus:border-indigo-500">
+                            <option value="all">Todas as Tags</option>
+                            <option value="Resumo">Resumo</option>
+                            <option value="Conteúdo da Aula">Conteúdo da Aula</option>
+                            <option value="Exercícios">Exercícios</option>
+                            <option value="Fórmulas">Fórmulas</option>
+                            <option value="Outros">Outros</option>
+                        </select>
+                        <button id="noteFilterFavoriteBtn" onclick="toggleNoteFavFilter()" class="px-3 py-2 bg-slate-950/80 border border-slate-800 hover:border-amber-500/50 rounded-xl text-xs font-semibold text-slate-300 flex items-center gap-2 transition-all">
+                            <i class="fa-solid fa-star text-slate-500" id="noteFavFilterIcon"></i> Favoritas
+                        </button>
                     </div>
                 </div>
-            </div>
 
-            <!-- 5. MODO FOCO / POMODORO -->
-            <div x-show="currentTab === 'focus'" class="max-w-xl mx-auto space-y-6 text-center">
-                <div class="bg-white dark:bg-slate-800 p-8 rounded-3xl border border-slate-200/80 dark:border-slate-700/80 shadow-xl">
-                    <h3 class="text-xl font-bold mb-1">Timer Pomodoro</h3>
-                    <p class="text-xs text-slate-400 mb-6">Ao terminar o cronômetro, o tempo é somado automaticamente à matéria selecionada!</p>
+                <!-- NOTES GRID -->
+                <div id="notesContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <!-- Dynamic Notes Render -->
+                </div>
+            </section>
 
-                    <!-- Seleção de Matéria -->
-                    <div class="mb-6">
-                        <label class="text-xs text-slate-400 block mb-2">Estudando para:</label>
-                        <select x-model="focusSubjectId" class="bg-slate-100 dark:bg-slate-700 rounded-xl px-4 py-2.5 text-xs font-semibold border-0 max-w-xs w-full">
-                            <template x-for="subj in subjects" :key="subj.id">
-                                <option :value="subj.id" x-text="subj.name"></option>
-                            </template>
-                        </select>
+            <!-- TAB 4: POMODORO & TIMER -->
+            <section id="tab-timer" class="tab-content hidden space-y-6 max-w-4xl mx-auto">
+                <div class="text-center space-y-2">
+                    <h2 class="text-3xl font-black text-white flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-stopwatch text-cyan-400"></i> Cronômetro Pomodoro
+                    </h2>
+                    <p class="text-xs text-slate-400">Mantenha o foco total durante sessões cronometradas</p>
+                </div>
+
+                <div class="glass-card rounded-3xl p-8 sm:p-12 text-center space-y-8 relative overflow-hidden">
+                    <!-- MODE SELECTOR -->
+                    <div class="inline-flex p-1.5 rounded-2xl bg-slate-950/80 border border-slate-800 gap-2">
+                        <button id="btn-mode-pomodoro" onclick="setTimerMode('pomodoro')" class="px-5 py-2 rounded-xl text-xs font-bold transition-all bg-indigo-600 text-white shadow-glow">Pomodoro (25m)</button>
+                        <button id="btn-mode-short" onclick="setTimerMode('short')" class="px-5 py-2 rounded-xl text-xs font-bold transition-all text-slate-400 hover:text-white">Pausa Curta (5m)</button>
+                        <button id="btn-mode-long" onclick="setTimerMode('long')" class="px-5 py-2 rounded-xl text-xs font-bold transition-all text-slate-400 hover:text-white">Pausa Longa (15m)</button>
                     </div>
 
-                    <!-- Relógio Digital -->
-                    <div class="text-6xl md:text-8xl font-black tracking-tight text-slate-800 dark:text-slate-100 my-8 font-mono" x-text="formatTime(focusSecondsLeft)"></div>
+                    <!-- TIMER DISPLAY -->
+                    <div class="py-6">
+                        <span id="timerDisplay" class="text-7xl sm:text-8xl font-black font-mono tracking-tighter text-white">25:00</span>
+                    </div>
 
-                    <!-- Controles -->
+                    <!-- CONTROLS -->
                     <div class="flex justify-center items-center gap-4">
-                        <button @click="toggleFocusTimer()" class="w-16 h-16 rounded-full bg-brand-600 text-white flex items-center justify-center text-xl shadow-lg shadow-brand-500/30 hover:scale-105 transition">
-                            <i :data-lucide="focusRunning ? 'pause' : 'play'" class="w-8 h-8"></i>
+                        <button id="timerToggleBtn" onclick="toggleTimer()" class="w-16 h-16 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white text-2xl flex items-center justify-center shadow-glow transition-all">
+                            <i class="fa-solid fa-play" id="timerToggleIcon"></i>
                         </button>
-                        <button @click="resetFocusTimer()" class="w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 flex items-center justify-center hover:bg-slate-200 transition">
-                            <i data-lucide="rotate-ccw" class="w-5 h-5"></i>
+                        <button onclick="resetTimer()" class="w-14 h-14 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xl flex items-center justify-center transition-all border border-slate-700/50">
+                            <i class="fa-solid fa-rotate-left"></i>
                         </button>
                     </div>
-                </div>
-            </div>
 
-            <!-- 6. PERFIL E CONFIGURAÇÕES DO ZERO -->
-            <div x-show="currentTab === 'settings'" class="max-w-xl mx-auto space-y-6">
-                <div class="bg-white dark:bg-slate-800 p-6 rounded-3xl border border-slate-200/80 dark:border-slate-700/80 space-y-6">
-                    <h4 class="font-bold text-lg text-slate-800 dark:text-slate-100">Personalização de Tema</h4>
-                    
+                    <!-- SUBJECT SELECTION FOR TIMER -->
+                    <div class="max-w-xs mx-auto pt-4">
+                        <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">Vincular a uma Matéria</label>
+                        <select id="timerSubjectSelect" class="w-full bg-slate-950/90 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
+                            <option value="">Sem matéria vinculada</option>
+                        </select>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 5: VIDEOAULAS & LINKS -->
+            <section id="tab-videos" class="tab-content hidden space-y-6 max-w-7xl mx-auto">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                     <div>
-                        <label class="text-xs text-slate-400 block mb-2">Cor de Destaque:</label>
-                        <div class="flex gap-3">
-                            <button @click="setThemeColor('theme-violet')" class="w-8 h-8 rounded-full bg-violet-500 ring-2 ring-offset-2 ring-violet-500"></button>
-                            <button @click="setThemeColor('theme-blue')" class="w-8 h-8 rounded-full bg-blue-500 ring-2 ring-offset-2 ring-blue-500"></button>
-                            <button @click="setThemeColor('theme-emerald')" class="w-8 h-8 rounded-full bg-emerald-500 ring-2 ring-offset-2 ring-emerald-500"></button>
-                            <button @click="setThemeColor('theme-orange')" class="w-8 h-8 rounded-full bg-orange-500 ring-2 ring-offset-2 ring-orange-500"></button>
-                            <button @click="setThemeColor('theme-rose')" class="w-8 h-8 rounded-full bg-rose-500 ring-2 ring-offset-2 ring-rose-500"></button>
-                        </div>
+                        <h2 class="text-2xl font-black text-white flex items-center gap-2">
+                            <i class="fa-solid fa-circle-play text-rose-400"></i> Videoaulas & Links
+                        </h2>
+                        <p class="text-xs text-slate-400">Sua biblioteca de links de estudo e videoaulas importantes</p>
                     </div>
-
-                    <div class="pt-6 border-t border-slate-100 dark:border-slate-700">
-                        <h4 class="font-bold text-sm text-red-600 mb-1">Zona de Perigo</h4>
-                        <p class="text-xs text-slate-400 mb-4">Apague todos os dados salvos para recomeçar o aplicativo 100% do zero.</p>
-                        <button @click="resetAllDataZero()" class="px-4 py-2.5 bg-red-50 text-red-600 font-bold text-xs rounded-xl hover:bg-red-100 transition border border-red-200">
-                            🗑 Limpar Tudo e Começar do Zero
-                        </button>
-                    </div>
+                    <button onclick="openVideoModal()" class="px-4 py-2.5 bg-rose-600 hover:bg-rose-500 text-white font-semibold rounded-xl text-xs shadow-glow transition-all flex items-center gap-2">
+                        <i class="fa-solid fa-plus"></i> Adicionar Link
+                    </button>
                 </div>
-            </div>
+
+                <div id="videosGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <!-- Dynamic Videos Render -->
+                </div>
+            </section>
+
+            <!-- TAB 6: TAREFAS -->
+            <section id="tab-tasks" class="tab-content hidden space-y-6 max-w-7xl mx-auto">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <div>
+                        <h2 class="text-2xl font-black text-white flex items-center gap-2">
+                            <i class="fa-solid fa-list-check text-purple-400"></i> Lista de Tarefas
+                        </h2>
+                        <p class="text-xs text-slate-400">Gerencie seus exercícios, trabalhos e metas diárias</p>
+                    </div>
+                    <button onclick="openTaskModal()" class="px-4 py-2.5 bg-purple-600 hover:bg-purple-500 text-white font-semibold rounded-xl text-xs shadow-glow transition-all flex items-center gap-2">
+                        <i class="fa-solid fa-plus"></i> Nova Tarefa
+                    </button>
+                </div>
+
+                <div id="tasksList" class="space-y-3">
+                    <!-- Dynamic Tasks Render -->
+                </div>
+            </section>
+
+            <!-- TAB 7: AGENDA & PROVAS -->
+            <section id="tab-schedule" class="tab-content hidden space-y-6 max-w-7xl mx-auto">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <div>
+                        <h2 class="text-2xl font-black text-white flex items-center gap-2">
+                            <i class="fa-solid fa-calendar-days text-blue-400"></i> Agenda & Calendário
+                        </h2>
+                        <p class="text-xs text-slate-400">Datas importantes de provas, entregas e eventos</p>
+                    </div>
+                    <button onclick="openEventModal()" class="px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl text-xs shadow-glow transition-all flex items-center gap-2">
+                        <i class="fa-solid fa-plus"></i> Novo Evento
+                    </button>
+                </div>
+
+                <div id="eventsList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <!-- Dynamic Events Render -->
+                </div>
+            </section>
+
         </main>
-
-        <!-- Bottom Navigation Mobile -->
-        <nav class="md:hidden fixed bottom-0 left-0 right-0 bg-white/90 dark:bg-slate-800/90 backdrop-blur-md border-t border-slate-200 dark:border-slate-700 px-2 py-2 flex justify-around items-center z-50">
-            <template x-for="item in navItems.slice(0, 5)" :key="item.id">
-                <button @click="currentTab = item.id" 
-                        :class="currentTab === item.id ? 'text-brand-600 dark:text-brand-400 font-bold' : 'text-slate-400'"
-                        class="flex flex-col items-center gap-0.5 p-1">
-                    <i :data-lucide="item.icon" class="w-5 h-5"></i>
-                    <span class="text-[10px]" x-text="item.label"></span>
-                </button>
-            </template>
-        </nav>
     </div>
 
-    <!-- MODAIS DE CADASTRO -->
-    
-    <!-- Modal: Adicionar Matéria -->
-    <div x-show="addSubjectModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" x-cloak>
-        <div class="bg-white dark:bg-slate-800 rounded-3xl max-w-md w-full p-6 border border-slate-200 dark:border-slate-700 shadow-2xl">
-            <h3 class="font-bold text-lg mb-4 text-slate-800 dark:text-slate-100">Nova Matéria</h3>
-            <div class="space-y-3">
+    <!-- MODAL: ADD / EDIT SUBJECT -->
+    <div id="subjectModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 z-50 hidden">
+        <div class="glass-card rounded-3xl w-full max-w-md p-6 relative space-y-4 shadow-2xl">
+            <button onclick="closeSubjectModal()" class="absolute top-5 right-5 text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+            <h3 class="text-lg font-bold text-white flex items-center gap-2"><i class="fa-solid fa-book-bookmark text-emerald-400"></i> Nova Matéria</h3>
+            <form onsubmit="saveSubject(event)" class="space-y-4">
                 <div>
-                    <label class="text-xs font-semibold text-slate-500 block mb-1">Nome da Matéria *</label>
-                    <input type="text" x-model="newSubject.name" placeholder="Ex: Matemática, Física, Inglês" class="w-full bg-slate-100 dark:bg-slate-700 border-0 rounded-xl px-3.5 py-2.5 text-sm">
-                </div>
-                <div>
-                    <label class="text-xs font-semibold text-slate-500 block mb-1">Nome do Professor (opcional)</label>
-                    <input type="text" x-model="newSubject.teacher" placeholder="Ex: Prof. Carlos" class="w-full bg-slate-100 dark:bg-slate-700 border-0 rounded-xl px-3.5 py-2.5 text-sm">
-                </div>
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label class="text-xs font-semibold text-slate-500 block mb-1">Nota Atual</label>
-                        <input type="number" step="0.1" x-model="newSubject.currentGrade" placeholder="0.0" class="w-full bg-slate-100 dark:bg-slate-700 border-0 rounded-xl px-3.5 py-2.5 text-sm">
-                    </div>
-                    <div>
-                        <label class="text-xs font-semibold text-slate-500 block mb-1">Meta de Nota</label>
-                        <input type="number" step="0.1" x-model="newSubject.targetGrade" placeholder="10.0" class="w-full bg-slate-100 dark:bg-slate-700 border-0 rounded-xl px-3.5 py-2.5 text-sm">
-                    </div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Nome da Matéria</label>
+                    <input type="text" id="subjectName" required placeholder="Ex: Matemática, História..." class="w-full bg-slate-950/90 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
                 </div>
                 <div>
-                    <label class="text-xs font-semibold text-slate-500 block mb-1">Cor da Matéria</label>
-                    <input type="color" x-model="newSubject.color" class="w-full h-10 rounded-xl cursor-pointer">
+                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Cor de Identificação</label>
+                    <input type="color" id="subjectColor" value="#10b981" class="w-full h-10 bg-slate-950/90 border border-slate-800 rounded-xl p-1 cursor-pointer">
                 </div>
-            </div>
-            <div class="flex justify-end gap-2 mt-6">
-                <button @click="addSubjectModal = false" class="px-4 py-2 text-xs font-semibold text-slate-500 hover:text-slate-700">Cancelar</button>
-                <button @click="saveSubject()" class="px-4 py-2 bg-brand-600 text-white font-bold text-xs rounded-xl hover:bg-brand-700">Salvar Matéria</button>
-            </div>
+                <div class="flex justify-end gap-3 pt-2">
+                    <button type="button" onclick="closeSubjectModal()" class="px-4 py-2.5 rounded-xl border border-slate-800 text-slate-400 text-xs font-semibold hover:bg-slate-800">Cancelar</button>
+                    <button type="submit" class="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-glow-emerald">Salvar</button>
+                </div>
+            </form>
         </div>
     </div>
 
-    <!-- Modal: Registrar Tempo Manual -->
-    <div x-show="addTimeModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" x-cloak>
-        <div class="bg-white dark:bg-slate-800 rounded-3xl max-w-md w-full p-6 border border-slate-200 dark:border-slate-700 shadow-2xl">
-            <h3 class="font-bold text-lg mb-4 text-slate-800 dark:text-slate-100">Registrar Tempo Estudado</h3>
-            <div class="space-y-4">
-                <div>
-                    <label class="text-xs font-semibold text-slate-500 block mb-1">Selecione a Matéria *</label>
-                    <select x-model="manualTime.subjectId" class="w-full bg-slate-100 dark:bg-slate-700 border-0 rounded-xl px-3.5 py-2.5 text-sm">
-                        <option value="">Selecione...</option>
-                        <template x-for="subj in subjects" :key="subj.id">
-                            <option :value="subj.id" x-text="subj.name"></option>
-                        </template>
-                    </select>
-                </div>
-                <div>
-                    <label class="text-xs font-semibold text-slate-500 block mb-1">Tempo em Minutos *</label>
-                    <input type="number" x-model="manualTime.minutes" placeholder="Ex: 45, 60, 120" class="w-full bg-slate-100 dark:bg-slate-700 border-0 rounded-xl px-3.5 py-2.5 text-sm">
-                </div>
-            </div>
-            <div class="flex justify-end gap-2 mt-6">
-                <button @click="addTimeModal = false" class="px-4 py-2 text-xs font-semibold text-slate-500">Cancelar</button>
-                <button @click="saveManualTime()" class="px-4 py-2 bg-emerald-600 text-white font-bold text-xs rounded-xl hover:bg-emerald-700">Adicionar Tempo</button>
-            </div>
-        </div>
-    </div>
+    <!-- MODAL: ADD / EDIT NOTE -->
+    <div id="noteModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 z-50 hidden">
+        <div class="glass-card rounded-3xl w-full max-w-2xl p-6 sm:p-8 relative space-y-5 shadow-2xl max-h-[90vh] overflow-y-auto">
+            <button onclick="closeNoteModal()" class="absolute top-5 right-5 text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+            <h3 id="noteModalTitle" class="text-xl font-extrabold text-white flex items-center gap-2"><i class="fa-solid fa-note-sticky text-amber-400"></i> Nova Anotação</h3>
 
-    <!-- Modal: Adicionar Videoaula / Link -->
-    <div x-show="addLinkModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" x-cloak>
-        <div class="bg-white dark:bg-slate-800 rounded-3xl max-w-md w-full p-6 border border-slate-200 dark:border-slate-700 shadow-2xl">
-            <h3 class="font-bold text-lg mb-4 text-slate-800 dark:text-slate-100">Nova Videoaula ou Link</h3>
-            <div class="space-y-3">
-                <div>
-                    <label class="text-xs font-semibold text-slate-500 block mb-1">Título do Conteúdo *</label>
-                    <input type="text" x-model="newLink.title" placeholder="Ex: Aula 01 - Geometria Plana" class="w-full bg-slate-100 dark:bg-slate-700 border-0 rounded-xl px-3.5 py-2.5 text-sm">
-                </div>
-                <div>
-                    <label class="text-xs font-semibold text-slate-500 block mb-1">URL / Link *</label>
-                    <input type="url" x-model="newLink.url" placeholder="https://youtube.com/watch?v=..." class="w-full bg-slate-100 dark:bg-slate-700 border-0 rounded-xl px-3.5 py-2.5 text-sm">
-                </div>
-                <div class="grid grid-cols-2 gap-3">
+            <form id="noteForm" onsubmit="saveNote(event)" class="space-y-4">
+                <input type="hidden" id="noteId">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                        <label class="text-xs font-semibold text-slate-500 block mb-1">Matéria *</label>
-                        <select x-model="newLink.subjectId" class="w-full bg-slate-100 dark:bg-slate-700 border-0 rounded-xl px-3.5 py-2.5 text-sm">
-                            <option value="">Selecione...</option>
-                            <template x-for="subj in subjects" :key="subj.id">
-                                <option :value="subj.id" x-text="subj.name"></option>
-                            </template>
-                        </select>
+                        <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Título</label>
+                        <input type="text" id="noteTitle" required placeholder="Ex: Fórmulas de Física" class="w-full bg-slate-950/90 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
                     </div>
                     <div>
-                        <label class="text-xs font-semibold text-slate-500 block mb-1">Plataforma</label>
-                        <select x-model="newLink.platform" class="w-full bg-slate-100 dark:bg-slate-700 border-0 rounded-xl px-3.5 py-2.5 text-sm">
-                            <option value="YouTube">YouTube</option>
-                            <option value="Drive">Google Drive</option>
-                            <option value="Artigo">Artigo/Site</option>
-                            <option value="Outro">Outro</option>
+                        <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Matéria</label>
+                        <select id="noteSubject" class="w-full bg-slate-950/90 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
+                            <option value="general">Geral / Nenhuma</option>
                         </select>
                     </div>
                 </div>
-                <div>
-                    <label class="text-xs font-semibold text-slate-500 block mb-1">Anotação Curta (opcional)</label>
-                    <input type="text" x-model="newLink.notes" placeholder="Ex: Importante rever a partir dos 10min" class="w-full bg-slate-100 dark:bg-slate-700 border-0 rounded-xl px-3.5 py-2.5 text-sm">
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Tag / Categoria</label>
+                        <select id="noteCategory" class="w-full bg-slate-950/90 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
+                            <option value="Resumo">Resumo</option>
+                            <option value="Conteúdo da Aula">Conteúdo da Aula</option>
+                            <option value="Exercícios">Exercícios</option>
+                            <option value="Fórmulas">Fórmulas</option>
+                            <option value="Outros">Outros</option>
+                        </select>
+                    </div>
+                    <div class="flex items-center gap-3 pt-4">
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="noteFavorite" class="sr-only peer">
+                            <div class="w-11 h-6 bg-slate-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500"></div>
+                            <span class="ml-3 text-xs font-semibold text-slate-300">Marcar como Favorita</span>
+                        </label>
+                    </div>
                 </div>
-            </div>
-            <div class="flex justify-end gap-2 mt-6">
-                <button @click="addLinkModal = false" class="px-4 py-2 text-xs font-semibold text-slate-500">Cancelar</button>
-                <button @click="saveLink()" class="px-4 py-2 bg-indigo-600 text-white font-bold text-xs rounded-xl hover:bg-indigo-700">Salvar Link</button>
-            </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Conteúdo</label>
+                    <textarea id="noteContent" rows="8" required placeholder="Escreva suas anotações aqui..." class="w-full bg-slate-950/90 border border-slate-800 rounded-xl p-3.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 font-mono leading-relaxed"></textarea>
+                </div>
+
+                <div class="flex justify-end gap-3 pt-2">
+                    <button type="button" onclick="closeNoteModal()" class="px-4 py-2.5 rounded-xl border border-slate-800 text-slate-400 text-xs font-semibold hover:bg-slate-800">Cancelar</button>
+                    <button type="submit" class="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-glow">Salvar Anotação</button>
+                </div>
+            </form>
         </div>
     </div>
 
-    <!-- Modal: Adicionar Tarefa -->
-    <div x-show="addTaskModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" x-cloak>
-        <div class="bg-white dark:bg-slate-800 rounded-3xl max-w-md w-full p-6 border border-slate-200 dark:border-slate-700 shadow-2xl">
-            <h3 class="font-bold text-lg mb-4 text-slate-800 dark:text-slate-100">Nova Tarefa</h3>
-            <div class="space-y-3">
+    <!-- MODAL: MANUAL STUDY SESSION -->
+    <div id="sessionModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 z-50 hidden">
+        <div class="glass-card rounded-3xl w-full max-w-md p-6 relative space-y-4 shadow-2xl">
+            <button onclick="closeSessionModal()" class="absolute top-5 right-5 text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+            <h3 class="text-lg font-bold text-white flex items-center gap-2"><i class="fa-solid fa-clock text-indigo-400"></i> Registrar Estudo Manual</h3>
+            <form onsubmit="saveSession(event)" class="space-y-4">
                 <div>
-                    <label class="text-xs font-semibold text-slate-500 block mb-1">Descrição da Tarefa *</label>
-                    <input type="text" x-model="newTask.title" placeholder="Ex: Resolver lista de exercícios 02" class="w-full bg-slate-100 dark:bg-slate-700 border-0 rounded-xl px-3.5 py-2.5 text-sm">
-                </div>
-                <div>
-                    <label class="text-xs font-semibold text-slate-500 block mb-1">Matéria Associada</label>
-                    <select x-model="newTask.subjectId" class="w-full bg-slate-100 dark:bg-slate-700 border-0 rounded-xl px-3.5 py-2.5 text-sm">
-                        <option value="">Geral</option>
-                        <template x-for="subj in subjects" :key="subj.id">
-                            <option :value="subj.id" x-text="subj.name"></option>
-                        </template>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Matéria</label>
+                    <select id="sessionSubject" required class="w-full bg-slate-950/90 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
                     </select>
                 </div>
-            </div>
-            <div class="flex justify-end gap-2 mt-6">
-                <button @click="addTaskModal = false" class="px-4 py-2 text-xs font-semibold text-slate-500">Cancelar</button>
-                <button @click="saveTask()" class="px-4 py-2 bg-brand-600 text-white font-bold text-xs rounded-xl hover:bg-brand-700">Criar Tarefa</button>
-            </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Tempo Estudado (Minutos)</label>
+                    <input type="number" id="sessionMinutes" min="1" required placeholder="Ex: 45" class="w-full bg-slate-950/90 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
+                </div>
+                <div class="flex justify-end gap-3 pt-2">
+                    <button type="button" onclick="closeSessionModal()" class="px-4 py-2.5 rounded-xl border border-slate-800 text-slate-400 text-xs font-semibold hover:bg-slate-800">Cancelar</button>
+                    <button type="submit" class="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-glow">Registrar</button>
+                </div>
+            </form>
         </div>
     </div>
 
+    <!-- SCRIPT DE LÓGICA -->
     <script>
-        function studyFlowApp() {
-            return {
-                currentTab: 'dashboard',
-                isDark: false,
-                themeColorClass: 'theme-violet',
+        let state = {
+            subjects: [],
+            sessions: [],
+            videos: [],
+            tasks: [],
+            events: [],
+            notes: []
+        };
 
-                // Navegação Menu
-                navItems: [
-                    { id: 'dashboard', label: 'Início', icon: 'layout-dashboard' },
-                    { id: 'subjects', label: 'Matérias & Horas', icon: 'book-open' },
-                    { id: 'links', label: 'Videoaulas & Links', icon: 'video' },
-                    { id: 'tasks', label: 'Tarefas', icon: 'check-square' },
-                    { id: 'focus', label: 'Modo Foco', icon: 'timer' },
-                    { id: 'settings', label: 'Ajustes', icon: 'settings' }
-                ],
+        let timerInterval = null;
+        let timerSeconds = 25 * 60;
+        let timerRunning = false;
+        let currentTimerMode = 'pomodoro';
+        let filterOnlyFavNotes = false;
+        let chartInstance = null;
 
-                // Coleções de dados zeradas inicialmente
-                subjects: [],
-                videoLinks: [],
-                tasks: [],
+        document.addEventListener('DOMContentLoaded', () => {
+            initApp();
+        });
 
-                // Timer Pomodoro
-                focusRunning: false,
-                focusSecondsLeft: 1500,
-                focusTimerId: null,
-                focusSubjectId: '',
+        function initApp() {
+            loadLocalStorage();
+            populateSubjectSelectors();
+            renderAllViews();
+            initChart();
+        }
 
-                // Filtros de Links
-                linkSubjectFilter: 'all',
-                linkStatusFilter: 'all',
-
-                // Estados dos Modais
-                addSubjectModal: false,
-                addTimeModal: false,
-                addLinkModal: false,
-                addTaskModal: false,
-
-                // Objetos de Formulário
-                newSubject: { name: '', teacher: '', currentGrade: '', targetGrade: 10, color: '#8b5cf6' },
-                manualTime: { subjectId: '', minutes: '' },
-                newLink: { title: '', url: '', subjectId: '', platform: 'YouTube', notes: '' },
-                newTask: { title: '', subjectId: '' },
-
-                chartInstance: null,
-
-                initApp() {
-                    this.loadData();
-                    this.$nextTick(() => {
-                        lucide.createIcons();
-                        this.updateChart();
-                    });
-                },
-
-                loadData() {
-                    const saved = localStorage.getItem('studyflow_fresh_data');
-                    if (saved) {
-                        const parsed = JSON.parse(saved);
-                        this.subjects = parsed.subjects || [];
-                        this.videoLinks = parsed.videoLinks || [];
-                        this.tasks = parsed.tasks || [];
-                    }
-                    if (this.subjects.length > 0 && !this.focusSubjectId) {
-                        this.focusSubjectId = this.subjects[0].id;
-                    }
-                },
-
-                saveData() {
-                    const payload = {
-                        subjects: this.subjects,
-                        videoLinks: this.videoLinks,
-                        tasks: this.tasks
-                    };
-                    localStorage.setItem('studyflow_fresh_data', JSON.stringify(payload));
-                    this.updateChart();
-                },
-
-                resetAllDataZero() {
-                    if (confirm("Tem certeza que deseja apagar absolutamente todos os dados e recomeçar do zero?")) {
-                        localStorage.removeItem('studyflow_fresh_data');
-                        this.subjects = [];
-                        this.videoLinks = [];
-                        this.tasks = [];
-                        this.saveData();
-                    }
-                },
-
-                // Matérias e Tempo
-                saveSubject() {
-                    if (!this.newSubject.name.trim()) return;
-                    const id = 'subj_' + Date.now();
-                    this.subjects.push({
-                        id: id,
-                        name: this.newSubject.name,
-                        teacher: this.newSubject.teacher,
-                        currentGrade: parseFloat(this.newSubject.currentGrade) || 0,
-                        targetGrade: parseFloat(this.newSubject.targetGrade) || 10,
-                        color: this.newSubject.color || '#8b5cf6',
-                        studiedMinutes: 0
-                    });
-                    if (!this.focusSubjectId) this.focusSubjectId = id;
-                    this.newSubject = { name: '', teacher: '', currentGrade: '', targetGrade: 10, color: '#8b5cf6' };
-                    this.addSubjectModal = false;
-                    this.saveData();
-                },
-
-                deleteSubject(id) {
-                    this.subjects = this.subjects.filter(s => s.id !== id);
-                    this.videoLinks = this.videoLinks.filter(l => l.subjectId !== id);
-                    this.saveData();
-                },
-
-                quickAddTime(subjectId, minutes) {
-                    const subj = this.subjects.find(s => s.id === subjectId);
-                    if (subj) {
-                        subj.studiedMinutes = (subj.studiedMinutes || 0) + minutes;
-                        this.saveData();
-                    }
-                },
-
-                saveManualTime() {
-                    if (!this.manualTime.subjectId || !this.manualTime.minutes) return;
-                    this.quickAddTime(this.manualTime.subjectId, parseInt(this.manualTime.minutes));
-                    this.manualTime = { subjectId: '', minutes: '' };
-                    this.addTimeModal = false;
-                },
-
-                getTotalStudiedMinutes() {
-                    return this.subjects.reduce((acc, s) => acc + (s.studiedMinutes || 0), 0);
-                },
-
-                formatTotalHours(totalMinutes) {
-                    const h = Math.floor(totalMinutes / 60);
-                    const m = totalMinutes % 60;
-                    return h > 0 ? `${h}h ${m}m` : `${m} min`;
-                },
-
-                // Videoaulas e Links
-                saveLink() {
-                    if (!this.newLink.title.trim() || !this.newLink.url.trim()) return;
-                    this.videoLinks.push({
-                        id: 'link_' + Date.now(),
-                        title: this.newLink.title,
-                        url: this.newLink.url,
-                        subjectId: this.newLink.subjectId,
-                        platform: this.newLink.platform,
-                        notes: this.newLink.notes,
-                        watched: false
-                    });
-                    this.newLink = { title: '', url: '', subjectId: '', platform: 'YouTube', notes: '' };
-                    this.addLinkModal = false;
-                    this.saveData();
-                },
-
-                toggleLinkWatched(item) {
-                    item.watched = !item.watched;
-                    this.saveData();
-                },
-
-                deleteLink(id) {
-                    this.videoLinks = this.videoLinks.filter(l => l.id !== id);
-                    this.saveData();
-                },
-
-                get filteredLinks() {
-                    return this.videoLinks.filter(item => {
-                        const matchSubject = this.linkSubjectFilter === 'all' || item.subjectId === this.linkSubjectFilter;
-                        const matchStatus = this.linkStatusFilter === 'all' || 
-                            (this.linkStatusFilter === 'watched' && item.watched) || 
-                            (this.linkStatusFilter === 'unwatched' && !item.watched);
-                        return matchSubject && matchStatus;
-                    });
-                },
-
-                // Tarefas
-                saveTask() {
-                    if (!this.newTask.title.trim()) return;
-                    this.tasks.push({
-                        id: 'task_' + Date.now(),
-                        title: this.newTask.title,
-                        subjectId: this.newTask.subjectId,
-                        status: 'todo',
-                        done: false
-                    });
-                    this.newTask = { title: '', subjectId: '' };
-                    this.addTaskModal = false;
-                    this.saveData();
-                },
-
-                moveTask(id, newStatus) {
-                    const task = this.tasks.find(t => t.id === id);
-                    if (task) {
-                        task.status = newStatus;
-                        if (newStatus === 'done') task.done = true;
-                        this.saveData();
-                    }
-                },
-
-                deleteTask(id) {
-                    this.tasks = this.tasks.filter(t => t.id !== id);
-                    this.saveData();
-                },
-
-                // Timer Pomodoro
-                toggleFocusTimer() {
-                    this.focusRunning = !this.focusRunning;
-                    if (this.focusRunning) {
-                        this.focusTimerId = setInterval(() => {
-                            if (this.focusSecondsLeft > 0) {
-                                this.focusSecondsLeft--;
-                            } else {
-                                if (this.focusSubjectId) {
-                                    this.quickAddTime(this.focusSubjectId, 25);
-                                }
-                                this.resetFocusTimer();
-                            }
-                        }, 1000);
-                    } else {
-                        clearInterval(this.focusTimerId);
-                    }
-                },
-
-                resetFocusTimer() {
-                    clearInterval(this.focusTimerId);
-                    this.focusRunning = false;
-                    this.focusSecondsLeft = 1500;
-                },
-
-                formatTime(seconds) {
-                    const m = Math.floor(seconds / 60).toString().padStart(2, '0');
-                    const s = (seconds % 60).toString().padStart(2, '0');
-                    return `${m}:${s}`;
-                },
-
-                // Auxiliares
-                getSubjectName(id) {
-                    return this.subjects.find(s => s.id === id)?.name || 'Geral / Outros';
-                },
-
-                toggleTheme() {
-                    this.isDark = !this.isDark;
-                },
-
-                setThemeColor(colorClass) {
-                    this.themeColorClass = colorClass;
-                },
-
-                getTabTitle() {
-                    const item = this.navItems.find(i => i.id === this.currentTab);
-                    return item ? item.label : 'Início';
-                },
-
-                getTabSubtitle() {
-                    return 'Gerencie seus estudos do seu jeito.';
-                },
-
-                updateChart() {
-                    const ctx = document.getElementById('dashboardWeeklyChart');
-                    if (!ctx || this.subjects.length === 0) return;
-
-                    const labels = this.subjects.map(s => s.name);
-                    const data = this.subjects.map(s => s.studiedMinutes || 0);
-                    const colors = this.subjects.map(s => s.color || '#8b5cf6');
-
-                    if (this.chartInstance) {
-                        this.chartInstance.destroy();
-                    }
-
-                    this.chartInstance = new Chart(ctx, {
-                        type: 'bar',
-                        data: {
-                            labels: labels,
-                            datasets: [{
-                                label: 'Minutos Estudados',
-                                data: data,
-                                backgroundColor: colors,
-                                borderRadius: 8
-                            }]
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            plugins: { legend: { display: false } }
-                        }
-                    });
+        function loadLocalStorage() {
+            const saved = localStorage.getItem('studyflow_modern_state');
+            if (saved) {
+                try {
+                    state = { ...state, ...JSON.parse(saved) };
+                } catch(e) {
+                    console.error('Erro ao ler LocalStorage', e);
                 }
             }
+        }
+
+        function saveLocalStorage() {
+            localStorage.setItem('studyflow_modern_state', JSON.stringify(state));
+        }
+
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            const bgClass = type === 'success' ? 'bg-indigo-600 text-white' : 'bg-amber-600 text-white';
+            
+            toast.className = `px-4 py-3 rounded-xl shadow-2xl text-xs font-semibold ${bgClass} flex items-center gap-2 pointer-events-auto animate-fadeIn transition-all`;
+            toast.innerHTML = `<i class="fa-solid fa-circle-info"></i> <span>${message}</span>`;
+            
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.nav-btn').forEach(el => {
+                el.classList.remove('active', 'bg-slate-800/80', 'text-white');
+                el.classList.add('text-slate-400');
+            });
+
+            const target = document.getElementById(`tab-${tabId}`);
+            const navBtn = document.getElementById(`nav-${tabId}`);
+
+            if (target) target.classList.remove('hidden');
+            if (navBtn) {
+                navBtn.classList.add('active', 'bg-slate-800/80', 'text-white');
+                navBtn.classList.remove('text-slate-400');
+            }
+
+            if (tabId === 'dashboard') updateDashboard();
+            if (tabId === 'notes') renderNotes();
+        }
+
+        function populateSubjectSelectors() {
+            const selects = ['noteSubject', 'noteFilterSubject', 'sessionSubject', 'timerSubjectSelect'];
+            selects.forEach(id => {
+                const el = document.getElementById(id);
+                if (!el) return;
+
+                const current = el.value;
+                if (id === 'noteFilterSubject') {
+                    el.innerHTML = '<option value="all">Todas as Matérias</option><option value="general">Geral / Sem Matéria</option>';
+                } else if (id === 'noteSubject') {
+                    el.innerHTML = '<option value="general">Geral / Nenhuma</option>';
+                } else if (id === 'timerSubjectSelect') {
+                    el.innerHTML = '<option value="">Sem matéria vinculada</option>';
+                } else {
+                    el.innerHTML = '';
+                }
+
+                state.subjects.forEach(sub => {
+                    const opt = document.createElement('option');
+                    opt.value = sub.id;
+                    opt.textContent = sub.name;
+                    el.appendChild(opt);
+                });
+
+                if (current) el.value = current;
+            });
+        }
+
+        // SUBJECTS
+        function openSubjectModal() { document.getElementById('subjectModal').classList.remove('hidden'); }
+        function closeSubjectModal() { document.getElementById('subjectModal').classList.add('hidden'); }
+
+        function saveSubject(e) {
+            e.preventDefault();
+            const name = document.getElementById('subjectName').value.trim();
+            const color = document.getElementById('subjectColor').value;
+
+            if (!name) return;
+
+            const newSubject = { id: 'sub_' + Date.now(), name, color };
+            state.subjects.push(newSubject);
+            saveLocalStorage();
+            populateSubjectSelectors();
+            renderSubjects();
+            updateDashboard();
+            closeSubjectModal();
+            document.getElementById('subjectName').value = '';
+            showToast('Matéria adicionada com sucesso!');
+        }
+
+        function deleteSubject(id) {
+            if (confirm('Deseja excluir esta matéria?')) {
+                state.subjects = state.subjects.filter(s => s.id !== id);
+                saveLocalStorage();
+                populateSubjectSelectors();
+                renderSubjects();
+                updateDashboard();
+                showToast('Matéria removida.');
+            }
+        }
+
+        function renderSubjects() {
+            const grid = document.getElementById('subjectsGrid');
+            if (!grid) return;
+
+            if (state.subjects.length === 0) {
+                grid.innerHTML = `
+                    <div class="col-span-full py-12 text-center glass-card rounded-2xl p-6">
+                        <i class="fa-solid fa-book-open text-3xl text-slate-600 mb-2"></i>
+                        <p class="text-xs text-slate-400">Nenhuma matéria cadastrada. Clique em "Adicionar Matéria".</p>
+                    </div>
+                `;
+                return;
+            }
+
+            grid.innerHTML = state.subjects.map(sub => {
+                const minutes = state.sessions
+                    .filter(s => s.subjectId === sub.id)
+                    .reduce((acc, s) => acc + s.minutes, 0);
+                const hours = (minutes / 60).toFixed(1);
+
+                return `
+                    <div class="glass-card glass-card-hover rounded-2xl p-5 flex flex-col justify-between space-y-4 border-l-4" style="border-left-color: ${sub.color}">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <h3 class="font-bold text-white text-base">${escapeHtml(sub.name)}</h3>
+                                <span class="text-[11px] text-slate-400 font-medium">${hours}h estudadas</span>
+                            </div>
+                            <button onclick="deleteSubject('${sub.id}')" class="text-slate-500 hover:text-rose-400 text-xs transition-colors">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // NOTES
+        function toggleNoteFavFilter() {
+            filterOnlyFavNotes = !filterOnlyFavNotes;
+            const btn = document.getElementById('noteFilterFavoriteBtn');
+            const icon = document.getElementById('noteFavFilterIcon');
+
+            if (filterOnlyFavNotes) {
+                btn.classList.add('bg-amber-500/10', 'border-amber-500/50', 'text-amber-400');
+                icon.classList.remove('text-slate-500');
+                icon.classList.add('text-amber-400');
+            } else {
+                btn.classList.remove('bg-amber-500/10', 'border-amber-500/50', 'text-amber-400');
+                icon.classList.add('text-slate-500');
+                icon.classList.remove('text-amber-400');
+            }
+            renderNotes();
+        }
+
+        function openNoteModal(noteId = null) {
+            populateSubjectSelectors();
+            const modal = document.getElementById('noteModal');
+            const form = document.getElementById('noteForm');
+            form.reset();
+            document.getElementById('noteId').value = '';
+
+            if (noteId) {
+                const note = state.notes.find(n => n.id === noteId);
+                if (note) {
+                    document.getElementById('noteId').value = note.id;
+                    document.getElementById('noteTitle').value = note.title;
+                    document.getElementById('noteSubject').value = note.subjectId || 'general';
+                    document.getElementById('noteCategory').value = note.category || 'Resumo';
+                    document.getElementById('noteFavorite').checked = !!note.favorite;
+                    document.getElementById('noteContent').value = note.content;
+                }
+            }
+            modal.classList.remove('hidden');
+        }
+
+        function closeNoteModal() { document.getElementById('noteModal').classList.add('hidden'); }
+
+        function saveNote(e) {
+            e.preventDefault();
+            const id = document.getElementById('noteId').value;
+            const title = document.getElementById('noteTitle').value.trim();
+            const subjectId = document.getElementById('noteSubject').value;
+            const category = document.getElementById('noteCategory').value;
+            const favorite = document.getElementById('noteFavorite').checked;
+            const content = document.getElementById('noteContent').value.trim();
+
+            if (!title || !content) return;
+
+            if (id) {
+                const idx = state.notes.findIndex(n => n.id === id);
+                if (idx !== -1) {
+                    state.notes[idx] = { ...state.notes[idx], title, subjectId, category, favorite, content, updatedAt: new Date().toISOString() };
+                }
+            } else {
+                state.notes.unshift({
+                    id: 'note_' + Date.now(),
+                    title, subjectId, category, favorite, content,
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString()
+                });
+            }
+
+            saveLocalStorage();
+            closeNoteModal();
+            renderNotes();
+            updateDashboard();
+            showToast('Anotação salva!');
+        }
+
+        function toggleNoteFavorite(id) {
+            const note = state.notes.find(n => n.id === id);
+            if (note) {
+                note.favorite = !note.favorite;
+                saveLocalStorage();
+                renderNotes();
+            }
+        }
+
+        function deleteNote(id) {
+            if (confirm('Deseja excluir esta anotação?')) {
+                state.notes = state.notes.filter(n => n.id !== id);
+                saveLocalStorage();
+                renderNotes();
+                updateDashboard();
+                showToast('Anotação excluída.');
+            }
+        }
+
+        function renderNotes() {
+            const container = document.getElementById('notesContainer');
+            if (!container) return;
+
+            const search = (document.getElementById('noteSearchInput')?.value || '').toLowerCase();
+            const subjectFilter = document.getElementById('noteFilterSubject')?.value || 'all';
+            const categoryFilter = document.getElementById('noteFilterCategory')?.value || 'all';
+
+            let filtered = state.notes.filter(note => {
+                const matchSearch = note.title.toLowerCase().includes(search) || note.content.toLowerCase().includes(search);
+                const matchSubject = subjectFilter === 'all' || (subjectFilter === 'general' && (!note.subjectId || note.subjectId === 'general')) || note.subjectId === subjectFilter;
+                const matchCategory = categoryFilter === 'all' || note.category === categoryFilter;
+                const matchFav = !filterOnlyFavNotes || note.favorite;
+                return matchSearch && matchSubject && matchCategory && matchFav;
+            });
+
+            if (filtered.length === 0) {
+                container.innerHTML = `
+                    <div class="col-span-full py-12 text-center glass-card rounded-2xl p-6">
+                        <i class="fa-solid fa-note-sticky text-3xl text-slate-600 mb-2"></i>
+                        <p class="text-xs text-slate-400">Nenhuma anotação encontrada.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = filtered.map(note => {
+                const subject = state.subjects.find(s => s.id === note.subjectId);
+                const subjectName = subject ? subject.name : 'Geral';
+                const subjectColor = subject ? subject.color : '#94a3b8';
+
+                return `
+                    <div class="glass-card glass-card-hover rounded-2xl p-5 flex flex-col justify-between space-y-3 relative group">
+                        <div class="space-y-2">
+                            <div class="flex items-center justify-between">
+                                <span class="px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider" style="background-color: ${subjectColor}20; color: ${subjectColor}">
+                                    ${escapeHtml(subjectName)}
+                                </span>
+                                <div class="flex items-center gap-1">
+                                    <button onclick="toggleNoteFavorite('${note.id}')" class="text-slate-500 hover:text-amber-400 p-1">
+                                        <i class="fa-${note.favorite ? 'solid text-amber-400' : 'regular'} fa-star text-xs"></i>
+                                    </button>
+                                    <button onclick="openNoteModal('${note.id}')" class="text-slate-500 hover:text-white p-1">
+                                        <i class="fa-solid fa-pen text-xs"></i>
+                                    </button>
+                                    <button onclick="deleteNote('${note.id}')" class="text-slate-500 hover:text-rose-400 p-1">
+                                        <i class="fa-solid fa-trash text-xs"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <h3 class="font-bold text-white text-sm">${escapeHtml(note.title)}</h3>
+                            <p class="text-slate-400 text-xs leading-relaxed line-clamp-4 font-mono bg-slate-950/40 p-3 rounded-xl border border-slate-800/40">${escapeHtml(note.content)}</p>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // TIMER LOGIC
+        function setTimerMode(mode) {
+            currentTimerMode = mode;
+            if (timerInterval) clearInterval(timerInterval);
+            timerRunning = false;
+            updateTimerToggleIcon();
+
+            if (mode === 'pomodoro') timerSeconds = 25 * 60;
+            if (mode === 'short') timerSeconds = 5 * 60;
+            if (mode === 'long') timerSeconds = 15 * 60;
+
+            updateTimerDisplay();
+        }
+
+        function toggleTimer() {
+            if (timerRunning) {
+                clearInterval(timerInterval);
+                timerRunning = false;
+            } else {
+                timerRunning = true;
+                timerInterval = setInterval(() => {
+                    if (timerSeconds > 0) {
+                        timerSeconds--;
+                        updateTimerDisplay();
+                    } else {
+                        clearInterval(timerInterval);
+                        timerRunning = false;
+                        showToast('Tempo concluído!');
+                        
+                        const subjectId = document.getElementById('timerSubjectSelect').value;
+                        if (currentTimerMode === 'pomodoro' && subjectId) {
+                            state.sessions.push({ id: 'sess_' + Date.now(), subjectId, minutes: 25, date: new Date().toISOString() });
+                            saveLocalStorage();
+                            updateDashboard();
+                        }
+                    }
+                    updateTimerToggleIcon();
+                }, 1000);
+            }
+            updateTimerToggleIcon();
+        }
+
+        function resetTimer() {
+            setTimerMode(currentTimerMode);
+        }
+
+        function updateTimerDisplay() {
+            const m = Math.floor(timerSeconds / 60).toString().padStart(2, '0');
+            const s = (timerSeconds % 60).toString().padStart(2, '0');
+            document.getElementById('timerDisplay').textContent = `${m}:${s}`;
+        }
+
+        function updateTimerToggleIcon() {
+            const icon = document.getElementById('timerToggleIcon');
+            icon.className = timerRunning ? 'fa-solid fa-pause' : 'fa-solid fa-play';
+        }
+
+        // SESSIONS
+        function openSessionModal() {
+            populateSubjectSelectors();
+            document.getElementById('sessionModal').classList.remove('hidden');
+        }
+        function closeSessionModal() { document.getElementById('sessionModal').classList.add('hidden'); }
+
+        function saveSession(e) {
+            e.preventDefault();
+            const subjectId = document.getElementById('sessionSubject').value;
+            const minutes = parseInt(document.getElementById('sessionMinutes').value);
+
+            if (!subjectId || isNaN(minutes) || minutes <= 0) return;
+
+            state.sessions.push({
+                id: 'sess_' + Date.now(),
+                subjectId,
+                minutes,
+                date: new Date().toISOString()
+            });
+
+            saveLocalStorage();
+            updateDashboard();
+            renderSubjects();
+            closeSessionModal();
+            showToast('Estudo registrado com sucesso!');
+        }
+
+        // DASHBOARD & CHARTS
+        function updateDashboard() {
+            const totalMinutes = state.sessions.reduce((acc, s) => acc + s.minutes, 0);
+            document.getElementById('dashTotalHours').textContent = (totalMinutes / 60).toFixed(1) + 'h';
+            document.getElementById('dashTotalSessions').textContent = state.sessions.length;
+            document.getElementById('dashTotalNotes').textContent = state.notes.length;
+
+            const recentsContainer = document.getElementById('dashRecentNotes');
+            if (recentsContainer) {
+                const recents = state.notes.slice(0, 3);
+                if (recents.length === 0) {
+                    recentsContainer.innerHTML = '<p class="text-xs text-slate-500">Nenhuma anotação criada ainda.</p>';
+                } else {
+                    recentsContainer.innerHTML = recents.map(n => `
+                        <div class="p-3 bg-slate-950/50 border border-slate-800 rounded-xl space-y-1">
+                            <h4 class="text-xs font-bold text-white line-clamp-1">${escapeHtml(n.title)}</h4>
+                            <p class="text-[11px] text-slate-400 line-clamp-1">${escapeHtml(n.content)}</p>
+                        </div>
+                    `).join('');
+                }
+            }
+
+            updateChart();
+        }
+
+        function initChart() {
+            const ctx = document.getElementById('subjectChart')?.getContext('2d');
+            if (!ctx) return;
+
+            chartInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        data: [],
+                        backgroundColor: [],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { color: '#94a3b8', font: { family: 'Inter', size: 11 } } }
+                    }
+                }
+            });
+            updateChart();
+        }
+
+        function updateChart() {
+
+            if (data.length === 0) {
+                chartInstance.data.labels = ['Sem registros'];
+                chartInstance.data.datasets[0].data = [1];
+                chartInstance.data.datasets[0].backgroundColor = ['#334155'];
+            } else {
+                chartInstance.data.labels = labels;
+                chartInstance.data.datasets[0].data = data;
+                chartInstance.data.datasets[0].backgroundColor = colors;
+            }
+
+            chartInstance.update();
+        }
+
+        function renderAllViews() {
+            renderSubjects();
+            renderNotes();
+            updateDashboard();
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
         }
     </script>
 </body>
