@@ -1,1056 +1,746 @@
-
-            if (!chartInstance) return;
-
-            const labels = [];
-            const data = [];
-            const colors = [];
-
-            state.subjects.forEach(sub => {
-                const mins = state.sessions.filter(s => s.subjectId === sub.id).reduce((acc, s) => acc + s.minutes, 0);
-                if (mins > 0) {
-                    labels.push(sub.name);
-                    data.push((mins / 60).toFixed(1));
-                    colors.push(sub.color);
-                }
-            });<!DOCTYPE html>
-<html lang="pt-BR" class="h-full bg-slate-950 text-slate-100 antialiased selection:bg-indigo-500 selection:text-white">
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>StudyFlow - Plataforma de Estudos</title>
-    
-    <!-- Google Fonts Inter -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-    
-    <!-- Tailwind CSS CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- FontAwesome 6 CDN -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
-    <!-- Chart.js CDN -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    fontFamily: {
-                        sans: ['Inter', 'sans-serif'],
-                        mono: ['JetBrains Mono', 'monospace'],
-                    },
-                    colors: {
-                        slate: {
-                            950: '#090d16',
-                            900: '#0f172a',
-                            850: '#141e33',
-                            800: '#1e293b',
-                            700: '#334155',
-                        }
-                    },
-                    boxShadow: {
-                        'glow': '0 0 25px -5px rgba(99, 102, 241, 0.25)',
-                        'glow-amber': '0 0 25px -5px rgba(245, 158, 11, 0.25)',
-                        'glow-emerald': '0 0 25px -5px rgba(16, 185, 129, 0.25)',
-                        'glass': '0 8px 32px 0 rgba(0, 0, 0, 0.37)',
-                    }
-                }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>StudyFlow - Gestão de Estudos</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Alpine.js -->
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#f0f7ff',
+              500: '#3b82f6',
+              600: '#2563eb',
+              700: '#1d4ed8',
             }
+          }
         }
-    </script>
-
-    <style>
-        /* Custom Scrollbar */
-        ::-webkit-scrollbar {
-            width: 6px;
-            height: 6px;
-        }
-        ::-webkit-scrollbar-track {
-            background: rgba(15, 23, 42, 0.6);
-        }
-        ::-webkit-scrollbar-thumb {
-            background: rgba(51, 65, 85, 0.6);
-            border-radius: 9999px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: rgba(99, 102, 241, 0.8);
-        }
-
-        /* Glassmorphism Styles */
-        .glass-card {
-            background: rgba(15, 23, 42, 0.7);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            border: 1px solid rgba(255, 255, 255, 0.07);
-        }
-        
-        .glass-card-hover {
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        .glass-card-hover:hover {
-            background: rgba(20, 30, 51, 0.85);
-            border-color: rgba(99, 102, 241, 0.3);
-            transform: translateY(-2px);
-        }
-
-        .glass-nav {
-            background: rgba(9, 13, 22, 0.85);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-        }
-
-        /* Gradient Text */
-        .gradient-text {
-            background: linear-gradient(135deg, #a5b4fc 0%, #6366f1 50%, #c084fc 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
-        /* Pulse glow animation */
-        @keyframes subtle-pulse {
-            0%, 100% { opacity: 0.4; }
-            50% { opacity: 0.8; }
-        }
-        .animate-glow {
-            animation: subtle-pulse 4s infinite ease-in-out;
-        }
-
-        .tab-content {
-            animation: fadeIn 0.3s ease-out forwards;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(6px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-    </style>
+      }
+    }
+  </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+    body { font-family: 'Inter', sans-serif; }
+    .font-mono { font-family: 'JetBrains Mono', monospace; }
+    .glass {
+      background: rgba(15, 23, 42, 0.75);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .glass-card {
+      background: rgba(30, 41, 59, 0.6);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, 0.2); border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(148, 163, 184, 0.4); }
+  </style>
 </head>
-<body class="h-full bg-slate-950 text-slate-100 flex flex-col md:flex-row overflow-hidden font-sans">
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col md:flex-row antialiased selection:bg-blue-500 selection:text-white"
+      x-data="studyFlowApp()" x-init="initApp()">
 
-    <!-- TOAST NOTIFICATION CONTAINER -->
-    <div id="toastContainer" class="fixed top-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+  <!-- SIDEBAR (Desktop) -->
+  <aside class="hidden md:flex flex-col w-64 glass border-r border-slate-800 p-4 h-screen sticky top-0 z-30">
+    <div class="flex items-center gap-3 px-2 py-3 mb-6 border-b border-slate-800/60">
+      <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center shadow-lg shadow-blue-500/20">
+        <i data-lucide="book-open" class="w-5 h-5 text-white"></i>
+      </div>
+      <div>
+        <h1 class="font-bold text-lg leading-none tracking-tight text-white">StudyFlow</h1>
+        <span class="text-[10px] text-blue-400 font-medium uppercase tracking-wider">Painel Pessoal</span>
+      </div>
+    </div>
 
-    <!-- BACKGROUND GLOW EFFECTS -->
-    <div class="fixed top-0 left-1/4 w-96 h-96 bg-indigo-600/10 rounded-full blur-[120px] pointer-events-none animate-glow"></div>
-    <div class="fixed bottom-0 right-1/4 w-96 h-96 bg-purple-600/10 rounded-full blur-[120px] pointer-events-none animate-glow" style="animation-delay: 2s;"></div>
+    <!-- NAVEGAÇÃO -->
+    <nav class="flex-1 space-y-1">
+      <template x-for="item in navItems" :key="item.id">
+        <button @click="currentTab = item.id" 
+                :class="currentTab === item.id ? 'bg-blue-600/15 text-blue-400 border-l-2 border-blue-500 font-semibold' : 'text-slate-400 hover:bg-slate-800/50 hover:text-slate-200'"
+                class="w-full flex items-center gap-3 px-3 py-2.5 rounded-r-lg transition-all text-sm group">
+          <i :data-lucide="item.icon" class="w-4 h-4 transition-transform group-hover:scale-110"></i>
+          <span x-text="item.label"></span>
+        </button>
+      </template>
+    </nav>
 
-    <!-- MAIN WRAPPER -->
-    <div class="flex flex-col md:flex-row w-full h-full z-10 overflow-hidden">
+    <!-- STATUS RÁPIDO DO SESSÃO -->
+    <div class="mt-auto p-3 rounded-xl bg-slate-900/80 border border-slate-800/80">
+      <div class="flex items-center justify-between text-xs text-slate-400 mb-1">
+        <span>Hoje estudado</span>
+        <span class="font-mono text-blue-400 font-bold" x-text="formatMinutes(todayStudiedMinutes)"></span>
+      </div>
+      <div class="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+        <div class="bg-blue-500 h-full rounded-full transition-all duration-500" :style="`width: ${Math.min(100, (todayStudiedMinutes / 120) * 100)}%`"></div>
+      </div>
+    </div>
+  </aside>
 
-        <!-- SIDEBAR NAVIGATION -->
-        <aside class="w-full md:w-72 glass-nav border-b md:border-b-0 md:border-r border-slate-800/80 flex md:flex-col justify-between shrink-0 z-20">
-            <div class="flex flex-col h-full justify-between">
-                <div>
-                    <!-- LOGO -->
-                    <div class="p-5 md:p-6 flex items-center justify-between border-b border-slate-800/60">
-                        <div class="flex items-center gap-3.5">
-                            <div class="w-11 h-11 rounded-2xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-violet-500 flex items-center justify-center text-white shadow-glow font-extrabold text-xl tracking-wider">
-                                SF
-                            </div>
-                            <div>
-                                <h1 class="font-extrabold text-xl tracking-tight leading-tight gradient-text">StudyFlow</h1>
-                                <span class="text-[11px] text-slate-400 font-medium tracking-wide">Plataforma de Estudos</span>
-                            </div>
-                        </div>
-                    </div>
+  <!-- NAV MOBILE (Bottom Bar) -->
+  <div class="md:hidden fixed bottom-0 left-0 right-0 glass border-t border-slate-800 z-50 flex justify-around p-2">
+    <template x-for="item in navItems" :key="item.id">
+      <button @click="currentTab = item.id"
+              :class="currentTab === item.id ? 'text-blue-400 font-bold' : 'text-slate-400'"
+              class="flex flex-col items-center gap-1 p-2 text-xs">
+        <i :data-lucide="item.icon" class="w-5 h-5"></i>
+        <span x-text="item.label" class="text-[10px]"></span>
+      </button>
+    </template>
+  </div>
 
-                    <!-- NAV MENU -->
-                    <nav class="p-3.5 space-y-1.5 overflow-x-auto flex md:flex-col horizontal-scroll md:overflow-visible">
-                        <button onclick="switchTab('dashboard')" id="nav-dashboard" class="nav-btn active w-full flex items-center gap-3.5 px-4 py-3 rounded-xl text-sm font-semibold transition-all text-slate-300 hover:text-white hover:bg-slate-800/60 shrink-0">
-                            <i class="fa-solid fa-chart-pie text-lg w-6 text-center text-indigo-400"></i>
-                            <span>Dashboard</span>
-                        </button>
-                        <button onclick="switchTab('subjects')" id="nav-subjects" class="nav-btn w-full flex items-center gap-3.5 px-4 py-3 rounded-xl text-sm font-semibold transition-all text-slate-400 hover:text-white hover:bg-slate-800/60 shrink-0">
-                            <i class="fa-solid fa-book-bookmark text-lg w-6 text-center text-emerald-400"></i>
-                            <span>Matérias</span>
-                        </button>
-                        <button onclick="switchTab('notes')" id="nav-notes" class="nav-btn w-full flex items-center gap-3.5 px-4 py-3 rounded-xl text-sm font-semibold transition-all text-slate-400 hover:text-white hover:bg-slate-800/60 shrink-0">
-                            <i class="fa-solid fa-note-sticky text-lg w-6 text-center text-amber-400"></i>
-                            <span>Caderno de Notas</span>
-                        </button>
-                        <button onclick="switchTab('timer')" id="nav-timer" class="nav-btn w-full flex items-center gap-3.5 px-4 py-3 rounded-xl text-sm font-semibold transition-all text-slate-400 hover:text-white hover:bg-slate-800/60 shrink-0">
-                            <i class="fa-solid fa-stopwatch text-lg w-6 text-center text-cyan-400"></i>
-                            <span>Modo Pomodoro</span>
-                        </button>
-                        <button onclick="switchTab('videos')" id="nav-videos" class="nav-btn w-full flex items-center gap-3.5 px-4 py-3 rounded-xl text-sm font-semibold transition-all text-slate-400 hover:text-white hover:bg-slate-800/60 shrink-0">
-                            <i class="fa-solid fa-circle-play text-lg w-6 text-center text-rose-400"></i>
-                            <span>Videoaulas & Links</span>
-                        </button>
-                        <button onclick="switchTab('tasks')" id="nav-tasks" class="nav-btn w-full flex items-center gap-3.5 px-4 py-3 rounded-xl text-sm font-semibold transition-all text-slate-400 hover:text-white hover:bg-slate-800/60 shrink-0">
-                            <i class="fa-solid fa-list-check text-lg w-6 text-center text-purple-400"></i>
-                            <span>Tarefas</span>
-                        </button>
-                        <button onclick="switchTab('schedule')" id="nav-schedule" class="nav-btn w-full flex items-center gap-3.5 px-4 py-3 rounded-xl text-sm font-semibold transition-all text-slate-400 hover:text-white hover:bg-slate-800/60 shrink-0">
-                            <i class="fa-solid fa-calendar-days text-lg w-6 text-center text-blue-400"></i>
-                            <span>Agenda & Provas</span>
-                        </button>
-                    </nav>
-                </div>
+  <!-- CONTEÚDO PRINCIPAL -->
+  <main class="flex-1 p-4 md:p-8 max-w-7xl mx-auto w-full pb-24 md:pb-8">
 
-                <!-- FOOTER QUICK ACTIONS -->
-                <div class="hidden md:block p-4 border-t border-slate-800/60">
-                    <button onclick="openSessionModal()" class="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-semibold text-xs tracking-wider uppercase transition-all shadow-glow flex items-center justify-center gap-2">
-                        <i class="fa-solid fa-plus"></i> Registrar Estudo
-                    </button>
-                </div>
+    <!-- CABEÇALHO DA PÁGINA -->
+    <header class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+      <div>
+        <h2 class="text-2xl md:text-3xl font-bold tracking-tight text-white" x-text="getCurrentTabTitle()"></h2>
+        <p class="text-xs md:text-sm text-slate-400 mt-1" x-text="getCurrentTabDesc()"></p>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <button @click="openModal('subject')" class="px-3.5 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs md:text-sm font-medium flex items-center gap-2 transition shadow-lg shadow-blue-600/20">
+          <i data-lucide="plus" class="w-4 h-4"></i> Nova Matéria
+        </button>
+        <button @click="openModal('manualSession')" class="px-3.5 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs md:text-sm font-medium border border-slate-700 flex items-center gap-2 transition">
+          <i data-lucide="clock" class="w-4 h-4"></i> Registrar Tempo
+        </button>
+      </div>
+    </header>
+
+    <!-- TAB 1: DASHBOARD -->
+    <div x-show="currentTab === 'dashboard'" x-cloak class="space-y-6">
+      
+      <!-- CARDS DE METRICAS -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="glass-card p-4 rounded-xl">
+          <div class="flex items-center justify-between text-slate-400 text-xs font-medium mb-2">
+            <span>Matérias Ativas</span>
+            <i data-lucide="book" class="w-4 h-4 text-blue-400"></i>
+          </div>
+          <div class="text-2xl font-bold text-white" x-text="subjects.length"></div>
+        </div>
+
+        <div class="glass-card p-4 rounded-xl">
+          <div class="flex items-center justify-between text-slate-400 text-xs font-medium mb-2">
+            <span>Estudado Hoje</span>
+            <i data-lucide="timer" class="w-4 h-4 text-emerald-400"></i>
+          </div>
+          <div class="text-2xl font-bold text-white font-mono" x-text="formatMinutes(todayStudiedMinutes)"></div>
+        </div>
+
+        <div class="glass-card p-4 rounded-xl">
+          <div class="flex items-center justify-between text-slate-400 text-xs font-medium mb-2">
+            <span>Total Estudado</span>
+            <i data-lucide="award" class="w-4 h-4 text-amber-400"></i>
+          </div>
+          <div class="text-2xl font-bold text-white font-mono" x-text="formatMinutes(totalStudiedMinutes)"></div>
+        </div>
+
+        <div class="glass-card p-4 rounded-xl">
+          <div class="flex items-center justify-between text-slate-400 text-xs font-medium mb-2">
+            <span>Anotações Salvas</span>
+            <i data-lucide="file-text" class="w-4 h-4 text-purple-400"></i>
+          </div>
+          <div class="text-2xl font-bold text-white" x-text="notes.length"></div>
+        </div>
+      </div>
+
+      <!-- SEÇÃO PRINCIPAL DASHBOARD -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <!-- MATÉRIAS & HORAS -->
+        <div class="lg:col-span-2 glass-card p-5 rounded-2xl border border-slate-800">
+          <h3 class="text-base font-semibold text-white mb-4 flex items-center gap-2">
+            <i data-lucide="bar-chart-2" class="w-4 h-4 text-blue-400"></i> Distribuição de Estudos
+          </h3>
+          <template x-if="subjects.length === 0">
+            <div class="text-center py-12 border border-dashed border-slate-800 rounded-xl">
+              <i data-lucide="folder-open" class="w-10 h-10 text-slate-600 mx-auto mb-2"></i>
+              <p class="text-slate-400 text-sm">Nenhuma matéria cadastrada ainda.</p>
+              <button @click="openModal('subject')" class="mt-3 px-3 py-1.5 bg-blue-600/20 text-blue-400 hover:bg-blue-600/30 rounded-lg text-xs font-medium border border-blue-500/30 transition">
+                + Adicionar primeira matéria
+              </button>
             </div>
-        </aside>
-
-        <!-- MAIN CONTENT AREA -->
-        <main class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
-
-            <!-- TAB 1: DASHBOARD -->
-            <section id="tab-dashboard" class="tab-content space-y-6 max-w-7xl mx-auto">
-                <!-- HEADER BANNER -->
-                <div class="glass-card rounded-3xl p-6 sm:p-8 relative overflow-hidden flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-                    <div class="space-y-2 relative z-10 max-w-xl">
-                        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-xs font-semibold">
-                            <span class="w-2 h-2 rounded-full bg-indigo-400 animate-ping"></span> Painel de Controle
-                        </div>
-                        <h2 class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">Bem-vindo ao seu espaço de estudos!</h2>
-                        <p class="text-slate-400 text-xs sm:text-sm leading-relaxed">Acompanhe seu tempo de foco, organize suas tarefas e mantenha suas anotações sempre atualizadas.</p>
-                    </div>
-                    <div class="flex flex-wrap gap-3 relative z-10">
-                        <button onclick="openNoteModal()" class="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold transition-all border border-slate-700/60 flex items-center gap-2">
-                            <i class="fa-solid fa-plus text-amber-400"></i> Nova Nota
-                        </button>
-                        <button onclick="openSessionModal()" class="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold transition-all shadow-glow flex items-center gap-2">
-                            <i class="fa-solid fa-play"></i> Iniciar Estudo
-                        </button>
-                    </div>
+          </template>
+          <template x-if="subjects.length > 0">
+            <div class="space-y-4">
+              <template x-for="subject in subjects" :key="subject.id">
+                <div class="space-y-1.5">
+                  <div class="flex items-center justify-between text-xs">
+                    <span class="font-medium text-slate-200 flex items-center gap-2">
+                      <span class="w-2.5 h-2.5 rounded-full" :style="`background-color: ${subject.color}`"></span>
+                      <span x-text="subject.name"></span>
+                    </span>
+                    <span class="font-mono text-slate-400" x-text="formatMinutes(getSubjectTotalMinutes(subject.id))"></span>
+                  </div>
+                  <div class="w-full bg-slate-800/80 h-2 rounded-full overflow-hidden">
+                    <div class="h-full rounded-full transition-all duration-500" 
+                         :style="`width: ${totalStudiedMinutes > 0 ? (getSubjectTotalMinutes(subject.id) / totalStudiedMinutes) * 100 : 0}%; background-color: ${subject.color}`"></div>
+                  </div>
                 </div>
-
-                <!-- METRICS GRID -->
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div class="glass-card glass-card-hover rounded-2xl p-5 flex items-center justify-between">
-                        <div>
-                            <span class="text-xs font-medium text-slate-400 block mb-1">Horas Totais</span>
-                            <h3 id="dashTotalHours" class="text-2xl font-black text-white">0.0h</h3>
-                        </div>
-                        <div class="w-12 h-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
-                            <i class="fa-solid fa-clock text-xl"></i>
-                        </div>
-                    </div>
-
-                    <div class="glass-card glass-card-hover rounded-2xl p-5 flex items-center justify-between">
-                        <div>
-                            <span class="text-xs font-medium text-slate-400 block mb-1">Sessões Realizadas</span>
-                            <h3 id="dashTotalSessions" class="text-2xl font-black text-white">0</h3>
-                        </div>
-                        <div class="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
-                            <i class="fa-solid fa-fire text-xl"></i>
-                        </div>
-                    </div>
-
-                    <div class="glass-card glass-card-hover rounded-2xl p-5 flex items-center justify-between">
-                        <div>
-                            <span class="text-xs font-medium text-slate-400 block mb-1">Tarefas Concluídas</span>
-                            <h3 id="dashCompletedTasks" class="text-2xl font-black text-white">0/0</h3>
-                        </div>
-                        <div class="w-12 h-12 rounded-2xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400">
-                            <i class="fa-solid fa-check-double text-xl"></i>
-                        </div>
-                    </div>
-
-                    <div class="glass-card glass-card-hover rounded-2xl p-5 flex items-center justify-between">
-                        <div>
-                            <span class="text-xs font-medium text-slate-400 block mb-1">Caderno de Notas</span>
-                            <h3 id="dashTotalNotes" class="text-2xl font-black text-white">0</h3>
-                        </div>
-                        <div class="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
-                            <i class="fa-solid fa-book-open text-xl"></i>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- CHARTS & RECENT CONTENT SECTION -->
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <div class="lg:col-span-2 glass-card rounded-2xl p-6 space-y-4">
-                        <div class="flex items-center justify-between">
-                            <h3 class="text-base font-bold text-white flex items-center gap-2">
-                                <i class="fa-solid fa-chart-line text-indigo-400"></i> Distribuição por Matéria
-                            </h3>
-                            <span class="text-xs text-slate-500">Tempo Estudado</span>
-                        </div>
-                        <div class="relative h-64 w-full flex items-center justify-center">
-                            <canvas id="subjectChart"></canvas>
-                        </div>
-                    </div>
-
-                    <!-- RECENT NOTES WIDGET -->
-                    <div class="glass-card rounded-2xl p-6 space-y-4 flex flex-col justify-between">
-                        <div>
-                            <div class="flex items-center justify-between mb-4">
-                                <h3 class="text-base font-bold text-white flex items-center gap-2">
-                                    <i class="fa-solid fa-note-sticky text-amber-400"></i> Últimas Anotações
-                                </h3>
-                                <button onclick="switchTab('notes')" class="text-xs text-indigo-400 hover:underline">Ver tudo</button>
-                            </div>
-                            <div id="dashRecentNotes" class="space-y-3">
-                                <!-- Dynamic recent notes -->
-                            </div>
-                        </div>
-                        <button onclick="openNoteModal()" class="w-full mt-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700/80 text-slate-200 text-xs font-semibold transition-all border border-slate-700/50 flex items-center justify-center gap-2">
-                            <i class="fa-solid fa-plus text-amber-400"></i> Criar Nova Anotação
-                        </button>
-                    </div>
-                </div>
-            </section>
-
-            <!-- TAB 2: MATÉRIAS -->
-            <section id="tab-subjects" class="tab-content hidden space-y-6 max-w-7xl mx-auto">
-                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                    <div>
-                        <h2 class="text-2xl font-black text-white flex items-center gap-2">
-                            <i class="fa-solid fa-book-bookmark text-emerald-400"></i> Minhas Matérias
-                        </h2>
-                        <p class="text-xs text-slate-400">Cadastre as disciplinas que deseja acompanhar e organizar</p>
-                    </div>
-                    <button onclick="openSubjectModal()" class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-xl text-xs shadow-glow-emerald transition-all flex items-center gap-2">
-                        <i class="fa-solid fa-plus"></i> Adicionar Matéria
-                    </button>
-                </div>
-
-                <div id="subjectsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <!-- Dynamic Subjects Render -->
-                </div>
-            </section>
-
-            <!-- TAB 3: CADERNO DE NOTAS -->
-            <section id="tab-notes" class="tab-content hidden space-y-6 max-w-7xl mx-auto">
-                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                    <div>
-                        <h2 class="text-2xl font-black text-white flex items-center gap-2">
-                            <i class="fa-solid fa-note-sticky text-amber-400"></i> Caderno de Anotações
-                        </h2>
-                        <p class="text-xs text-slate-400">Resumos, rascunhos, fórmulas e anotações organizadas</p>
-                    </div>
-                    <button onclick="openNoteModal()" class="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl text-xs shadow-glow transition-all flex items-center gap-2">
-                        <i class="fa-solid fa-plus"></i> Nova Anotação
-                    </button>
-                </div>
-
-                <!-- FILTER BAR -->
-                <div class="glass-card rounded-2xl p-4 flex flex-col md:flex-row items-center justify-between gap-4">
-                    <div class="relative w-full md:w-80">
-                        <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 text-xs"></i>
-                        <input type="text" id="noteSearchInput" oninput="renderNotes()" placeholder="Buscar anotações..." class="w-full bg-slate-950/80 border border-slate-800 rounded-xl pl-9 pr-4 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
-                    </div>
-                    <div class="flex flex-wrap items-center gap-3 w-full md:w-auto">
-                        <select id="noteFilterSubject" onchange="renderNotes()" class="bg-slate-950/80 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-300 focus:outline-none focus:border-indigo-500">
-                            <option value="all">Todas as Matérias</option>
-                        </select>
-                        <select id="noteFilterCategory" onchange="renderNotes()" class="bg-slate-950/80 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-300 focus:outline-none focus:border-indigo-500">
-                            <option value="all">Todas as Tags</option>
-                            <option value="Resumo">Resumo</option>
-                            <option value="Conteúdo da Aula">Conteúdo da Aula</option>
-                            <option value="Exercícios">Exercícios</option>
-                            <option value="Fórmulas">Fórmulas</option>
-                            <option value="Outros">Outros</option>
-                        </select>
-                        <button id="noteFilterFavoriteBtn" onclick="toggleNoteFavFilter()" class="px-3 py-2 bg-slate-950/80 border border-slate-800 hover:border-amber-500/50 rounded-xl text-xs font-semibold text-slate-300 flex items-center gap-2 transition-all">
-                            <i class="fa-solid fa-star text-slate-500" id="noteFavFilterIcon"></i> Favoritas
-                        </button>
-                    </div>
-                </div>
-
-                <!-- NOTES GRID -->
-                <div id="notesContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <!-- Dynamic Notes Render -->
-                </div>
-            </section>
-
-            <!-- TAB 4: POMODORO & TIMER -->
-            <section id="tab-timer" class="tab-content hidden space-y-6 max-w-4xl mx-auto">
-                <div class="text-center space-y-2">
-                    <h2 class="text-3xl font-black text-white flex items-center justify-center gap-2">
-                        <i class="fa-solid fa-stopwatch text-cyan-400"></i> Cronômetro Pomodoro
-                    </h2>
-                    <p class="text-xs text-slate-400">Mantenha o foco total durante sessões cronometradas</p>
-                </div>
-
-                <div class="glass-card rounded-3xl p-8 sm:p-12 text-center space-y-8 relative overflow-hidden">
-                    <!-- MODE SELECTOR -->
-                    <div class="inline-flex p-1.5 rounded-2xl bg-slate-950/80 border border-slate-800 gap-2">
-                        <button id="btn-mode-pomodoro" onclick="setTimerMode('pomodoro')" class="px-5 py-2 rounded-xl text-xs font-bold transition-all bg-indigo-600 text-white shadow-glow">Pomodoro (25m)</button>
-                        <button id="btn-mode-short" onclick="setTimerMode('short')" class="px-5 py-2 rounded-xl text-xs font-bold transition-all text-slate-400 hover:text-white">Pausa Curta (5m)</button>
-                        <button id="btn-mode-long" onclick="setTimerMode('long')" class="px-5 py-2 rounded-xl text-xs font-bold transition-all text-slate-400 hover:text-white">Pausa Longa (15m)</button>
-                    </div>
-
-                    <!-- TIMER DISPLAY -->
-                    <div class="py-6">
-                        <span id="timerDisplay" class="text-7xl sm:text-8xl font-black font-mono tracking-tighter text-white">25:00</span>
-                    </div>
-
-                    <!-- CONTROLS -->
-                    <div class="flex justify-center items-center gap-4">
-                        <button id="timerToggleBtn" onclick="toggleTimer()" class="w-16 h-16 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white text-2xl flex items-center justify-center shadow-glow transition-all">
-                            <i class="fa-solid fa-play" id="timerToggleIcon"></i>
-                        </button>
-                        <button onclick="resetTimer()" class="w-14 h-14 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xl flex items-center justify-center transition-all border border-slate-700/50">
-                            <i class="fa-solid fa-rotate-left"></i>
-                        </button>
-                    </div>
-
-                    <!-- SUBJECT SELECTION FOR TIMER -->
-                    <div class="max-w-xs mx-auto pt-4">
-                        <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">Vincular a uma Matéria</label>
-                        <select id="timerSubjectSelect" class="w-full bg-slate-950/90 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
-                            <option value="">Sem matéria vinculada</option>
-                        </select>
-                    </div>
-                </div>
-            </section>
-
-            <!-- TAB 5: VIDEOAULAS & LINKS -->
-            <section id="tab-videos" class="tab-content hidden space-y-6 max-w-7xl mx-auto">
-                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                    <div>
-                        <h2 class="text-2xl font-black text-white flex items-center gap-2">
-                            <i class="fa-solid fa-circle-play text-rose-400"></i> Videoaulas & Links
-                        </h2>
-                        <p class="text-xs text-slate-400">Sua biblioteca de links de estudo e videoaulas importantes</p>
-                    </div>
-                    <button onclick="openVideoModal()" class="px-4 py-2.5 bg-rose-600 hover:bg-rose-500 text-white font-semibold rounded-xl text-xs shadow-glow transition-all flex items-center gap-2">
-                        <i class="fa-solid fa-plus"></i> Adicionar Link
-                    </button>
-                </div>
-
-                <div id="videosGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <!-- Dynamic Videos Render -->
-                </div>
-            </section>
-
-            <!-- TAB 6: TAREFAS -->
-            <section id="tab-tasks" class="tab-content hidden space-y-6 max-w-7xl mx-auto">
-                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                    <div>
-                        <h2 class="text-2xl font-black text-white flex items-center gap-2">
-                            <i class="fa-solid fa-list-check text-purple-400"></i> Lista de Tarefas
-                        </h2>
-                        <p class="text-xs text-slate-400">Gerencie seus exercícios, trabalhos e metas diárias</p>
-                    </div>
-                    <button onclick="openTaskModal()" class="px-4 py-2.5 bg-purple-600 hover:bg-purple-500 text-white font-semibold rounded-xl text-xs shadow-glow transition-all flex items-center gap-2">
-                        <i class="fa-solid fa-plus"></i> Nova Tarefa
-                    </button>
-                </div>
-
-                <div id="tasksList" class="space-y-3">
-                    <!-- Dynamic Tasks Render -->
-                </div>
-            </section>
-
-            <!-- TAB 7: AGENDA & PROVAS -->
-            <section id="tab-schedule" class="tab-content hidden space-y-6 max-w-7xl mx-auto">
-                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                    <div>
-                        <h2 class="text-2xl font-black text-white flex items-center gap-2">
-                            <i class="fa-solid fa-calendar-days text-blue-400"></i> Agenda & Calendário
-                        </h2>
-                        <p class="text-xs text-slate-400">Datas importantes de provas, entregas e eventos</p>
-                    </div>
-                    <button onclick="openEventModal()" class="px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl text-xs shadow-glow transition-all flex items-center gap-2">
-                        <i class="fa-solid fa-plus"></i> Novo Evento
-                    </button>
-                </div>
-
-                <div id="eventsList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <!-- Dynamic Events Render -->
-                </div>
-            </section>
-
-        </main>
-    </div>
-
-    <!-- MODAL: ADD / EDIT SUBJECT -->
-    <div id="subjectModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 z-50 hidden">
-        <div class="glass-card rounded-3xl w-full max-w-md p-6 relative space-y-4 shadow-2xl">
-            <button onclick="closeSubjectModal()" class="absolute top-5 right-5 text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
-            <h3 class="text-lg font-bold text-white flex items-center gap-2"><i class="fa-solid fa-book-bookmark text-emerald-400"></i> Nova Matéria</h3>
-            <form onsubmit="saveSubject(event)" class="space-y-4">
-                <div>
-                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Nome da Matéria</label>
-                    <input type="text" id="subjectName" required placeholder="Ex: Matemática, História..." class="w-full bg-slate-950/90 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Cor de Identificação</label>
-                    <input type="color" id="subjectColor" value="#10b981" class="w-full h-10 bg-slate-950/90 border border-slate-800 rounded-xl p-1 cursor-pointer">
-                </div>
-                <div class="flex justify-end gap-3 pt-2">
-                    <button type="button" onclick="closeSubjectModal()" class="px-4 py-2.5 rounded-xl border border-slate-800 text-slate-400 text-xs font-semibold hover:bg-slate-800">Cancelar</button>
-                    <button type="submit" class="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-glow-emerald">Salvar</button>
-                </div>
-            </form>
+              </template>
+            </div>
+          </template>
         </div>
-    </div>
 
-    <!-- MODAL: ADD / EDIT NOTE -->
-    <div id="noteModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 z-50 hidden">
-        <div class="glass-card rounded-3xl w-full max-w-2xl p-6 sm:p-8 relative space-y-5 shadow-2xl max-h-[90vh] overflow-y-auto">
-            <button onclick="closeNoteModal()" class="absolute top-5 right-5 text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
-            <h3 id="noteModalTitle" class="text-xl font-extrabold text-white flex items-center gap-2"><i class="fa-solid fa-note-sticky text-amber-400"></i> Nova Anotação</h3>
-
-            <form id="noteForm" onsubmit="saveNote(event)" class="space-y-4">
-                <input type="hidden" id="noteId">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Título</label>
-                        <input type="text" id="noteTitle" required placeholder="Ex: Fórmulas de Física" class="w-full bg-slate-950/90 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Matéria</label>
-                        <select id="noteSubject" class="w-full bg-slate-950/90 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
-                            <option value="general">Geral / Nenhuma</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Tag / Categoria</label>
-                        <select id="noteCategory" class="w-full bg-slate-950/90 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
-                            <option value="Resumo">Resumo</option>
-                            <option value="Conteúdo da Aula">Conteúdo da Aula</option>
-                            <option value="Exercícios">Exercícios</option>
-                            <option value="Fórmulas">Fórmulas</option>
-                            <option value="Outros">Outros</option>
-                        </select>
-                    </div>
-                    <div class="flex items-center gap-3 pt-4">
-                        <label class="relative inline-flex items-center cursor-pointer">
-                            <input type="checkbox" id="noteFavorite" class="sr-only peer">
-                            <div class="w-11 h-6 bg-slate-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500"></div>
-                            <span class="ml-3 text-xs font-semibold text-slate-300">Marcar como Favorita</span>
-                        </label>
-                    </div>
-                </div>
-
+        <!-- SESSÕES RECENTES -->
+        <div class="glass-card p-5 rounded-2xl border border-slate-800 flex flex-col">
+          <h3 class="text-base font-semibold text-white mb-4 flex items-center gap-2">
+            <i data-lucide="history" class="w-4 h-4 text-indigo-400"></i> Histórico Recente
+          </h3>
+          <div class="flex-1 overflow-y-auto space-y-3 max-h-80 pr-1">
+            <template x-if="sessions.length === 0">
+              <p class="text-xs text-slate-500 text-center py-8">Nenhum registro de estudo efetuado.</p>
+            </template>
+            <template x-for="session in sessions.slice(-6).reverse()" :key="session.id">
+              <div class="p-3 rounded-lg bg-slate-900/50 border border-slate-800/80 flex items-center justify-between text-xs">
                 <div>
-                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Conteúdo</label>
-                    <textarea id="noteContent" rows="8" required placeholder="Escreva suas anotações aqui..." class="w-full bg-slate-950/90 border border-slate-800 rounded-xl p-3.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 font-mono leading-relaxed"></textarea>
+                  <p class="font-medium text-slate-200" x-text="getSubjectName(session.subjectId)"></p>
+                  <p class="text-[10px] text-slate-500" x-text="formatDate(session.date)"></p>
                 </div>
-
-                <div class="flex justify-end gap-3 pt-2">
-                    <button type="button" onclick="closeNoteModal()" class="px-4 py-2.5 rounded-xl border border-slate-800 text-slate-400 text-xs font-semibold hover:bg-slate-800">Cancelar</button>
-                    <button type="submit" class="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-glow">Salvar Anotação</button>
-                </div>
-            </form>
+                <span class="font-mono font-semibold px-2 py-1 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20" x-text="`${session.minutes} min`"></span>
+              </div>
+            </template>
+          </div>
         </div>
+
+      </div>
     </div>
 
-    <!-- MODAL: MANUAL STUDY SESSION -->
-    <div id="sessionModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 z-50 hidden">
-        <div class="glass-card rounded-3xl w-full max-w-md p-6 relative space-y-4 shadow-2xl">
-            <button onclick="closeSessionModal()" class="absolute top-5 right-5 text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
-            <h3 class="text-lg font-bold text-white flex items-center gap-2"><i class="fa-solid fa-clock text-indigo-400"></i> Registrar Estudo Manual</h3>
-            <form onsubmit="saveSession(event)" class="space-y-4">
-                <div>
-                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Matéria</label>
-                    <select id="sessionSubject" required class="w-full bg-slate-950/90 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Tempo Estudado (Minutos)</label>
-                    <input type="number" id="sessionMinutes" min="1" required placeholder="Ex: 45" class="w-full bg-slate-950/90 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
-                </div>
-                <div class="flex justify-end gap-3 pt-2">
-                    <button type="button" onclick="closeSessionModal()" class="px-4 py-2.5 rounded-xl border border-slate-800 text-slate-400 text-xs font-semibold hover:bg-slate-800">Cancelar</button>
-                    <button type="submit" class="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-glow">Registrar</button>
-                </div>
-            </form>
+    <!-- TAB 2: MATÉRIAS -->
+    <div x-show="currentTab === 'subjects'" x-cloak class="space-y-6">
+      <div class="flex justify-between items-center">
+        <h3 class="text-lg font-bold text-white">Minhas Disciplinas</h3>
+        <button @click="openModal('subject')" class="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium flex items-center gap-1.5 transition">
+          <i data-lucide="plus" class="w-3.5 h-3.5"></i> Nova Matéria
+        </button>
+      </div>
+
+      <template x-if="subjects.length === 0">
+        <div class="text-center py-16 glass-card rounded-2xl border border-slate-800">
+          <i data-lucide="book-open" class="w-12 h-12 text-slate-600 mx-auto mb-3"></i>
+          <p class="text-slate-300 font-medium">Sua lista de matérias está vazia.</p>
+          <p class="text-xs text-slate-500 mt-1 max-w-sm mx-auto">Cadastre as disciplinas do seu curso ou escola para começar a contabilizar os estudos.</p>
         </div>
+      </template>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <template x-for="subject in subjects" :key="subject.id">
+          <div class="glass-card p-5 rounded-xl border border-slate-800 relative group">
+            <div class="flex items-start justify-between mb-3">
+              <div class="flex items-center gap-3">
+                <div class="w-4 h-4 rounded-full" :style="`background-color: ${subject.color}`"></div>
+                <div>
+                  <h4 class="font-semibold text-white text-base" x-text="subject.name"></h4>
+                  <p class="text-xs text-slate-400" x-text="subject.teacher ? 'Prof. ' + subject.teacher : 'Sem professor informado'"></p>
+                </div>
+              </div>
+              <button @click="deleteSubject(subject.id)" class="opacity-0 group-hover:opacity-100 text-slate-500 hover:text-rose-400 transition p-1">
+                <i data-lucide="trash-2" class="w-4 h-4"></i>
+              </button>
+            </div>
+            <div class="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-400">
+              <span>Total acumulado:</span>
+              <span class="font-mono font-bold text-slate-200" x-text="formatMinutes(getSubjectTotalMinutes(subject.id))"></span>
+            </div>
+          </div>
+        </template>
+      </div>
     </div>
 
-    <!-- SCRIPT DE LÓGICA -->
-    <script>
-        let state = {
-            subjects: [],
-            sessions: [],
-            videos: [],
-            tasks: [],
-            events: [],
-            notes: []
-        };
+    <!-- TAB 3: ANOTAÇÕES -->
+    <div x-show="currentTab === 'notes'" x-cloak class="space-y-6">
+      <div class="flex flex-col sm:flex-row gap-3 justify-between sm:items-center">
+        <div class="relative flex-1 max-w-md">
+          <i data-lucide="search" class="w-4 h-4 absolute left-3 top-3 text-slate-500"></i>
+          <input type="text" x-model="searchNoteQuery" placeholder="Buscar anotações..." class="w-full bg-slate-900 border border-slate-800 rounded-lg pl-9 pr-4 py-2 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-blue-500">
+        </div>
+        <button @click="openModal('note')" class="px-3.5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-medium flex items-center gap-2 transition self-start sm:self-auto">
+          <i data-lucide="plus" class="w-4 h-4"></i> Criar Anotação
+        </button>
+      </div>
 
-        let timerInterval = null;
-        let timerSeconds = 25 * 60;
-        let timerRunning = false;
-        let currentTimerMode = 'pomodoro';
-        let filterOnlyFavNotes = false;
-        let chartInstance = null;
+      <template x-if="filteredNotes().length === 0">
+        <div class="text-center py-16 glass-card rounded-2xl border border-slate-800">
+          <i data-lucide="file-text" class="w-12 h-12 text-slate-600 mx-auto mb-3"></i>
+          <p class="text-slate-300 font-medium">Nenhuma anotação encontrada.</p>
+        </div>
+      </template>
 
-        document.addEventListener('DOMContentLoaded', () => {
-            initApp();
-        });
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <template x-for="note in filteredNotes()" :key="note.id">
+          <div class="glass-card p-5 rounded-xl border border-slate-800 flex flex-col justify-between h-48 hover:border-slate-700 transition">
+            <div>
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-[10px] font-semibold px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20" x-text="getSubjectName(note.subjectId)"></span>
+                <span class="text-[10px] text-slate-500" x-text="formatDate(note.date)"></span>
+              </div>
+              <h4 class="font-bold text-slate-100 text-sm line-clamp-1 mb-2" x-text="note.title"></h4>
+              <p class="text-slate-400 text-xs line-clamp-3 leading-relaxed" x-text="note.content"></p>
+            </div>
+            <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-800/80">
+              <button @click="deleteNote(note.id)" class="text-slate-500 hover:text-rose-400 p-1 text-xs transition">
+                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+              </button>
+            </div>
+          </div>
+        </template>
+      </div>
+    </div>
 
-        function initApp() {
-            loadLocalStorage();
-            populateSubjectSelectors();
-            renderAllViews();
-            initChart();
-        }
+    <!-- TAB 4: MODO FOCO (POMODORO) -->
+    <div x-show="currentTab === 'pomodoro'" x-cloak class="max-w-xl mx-auto glass-card p-8 rounded-2xl border border-slate-800 text-center space-y-6">
+      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 text-blue-400 text-xs font-semibold border border-blue-500/20">
+        <i data-lucide="flame" class="w-3.5 h-3.5"></i> Modo Foco Total
+      </div>
 
-        function loadLocalStorage() {
-            const saved = localStorage.getItem('studyflow_modern_state');
-            if (saved) {
-                try {
-                    state = { ...state, ...JSON.parse(saved) };
-                } catch(e) {
-                    console.error('Erro ao ler LocalStorage', e);
+      <!-- TIMER DISPLAY -->
+      <div class="py-6">
+        <div class="text-6xl md:text-7xl font-mono font-bold text-white tracking-wider" x-text="formatTimer(timerSeconds)"></div>
+      </div>
+
+      <!-- CONTROLES -->
+      <div class="flex items-center justify-center gap-3">
+        <button @click="toggleTimer()" :class="timerActive ? 'bg-amber-600 hover:bg-amber-500' : 'bg-blue-600 hover:bg-blue-500'" class="px-6 py-3 rounded-xl text-white font-bold text-sm transition shadow-lg flex items-center gap-2">
+          <i :data-lucide="timerActive ? 'pause' : 'play'" class="w-4 h-4"></i>
+          <span x-text="timerActive ? 'Pausar' : 'Iniciar'"></span>
+        </button>
+        <button @click="resetTimer()" class="px-4 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium text-sm border border-slate-700 transition">
+          <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <!-- SELEÇÃO DE MATÉRIA -->
+      <div class="pt-4 border-t border-slate-800/80 text-left">
+        <label class="block text-xs font-medium text-slate-400 mb-1">Vincular a uma Matéria:</label>
+        <select x-model="selectedPomodoroSubject" class="w-full bg-slate-900 border border-slate-800 rounded-lg p-2.5 text-xs text-slate-200 focus:outline-none focus:border-blue-500">
+          <option value="">Selecione a matéria (Opcional)</option>
+          <template x-for="sub in subjects" :key="sub.id">
+            <option :value="sub.id" x-text="sub.name"></option>
+          </template>
+        </select>
+      </div>
+    </div>
+
+    <!-- TAB 5: VIDEOAULAS -->
+    <div x-show="currentTab === 'videos'" x-cloak class="space-y-6">
+      <div class="flex justify-between items-center">
+        <h3 class="text-lg font-bold text-white">Links de Aulas e Vídeos</h3>
+        <button @click="openModal('video')" class="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium flex items-center gap-1.5 transition">
+          <i data-lucide="plus" class="w-3.5 h-3.5"></i> Adicionar Link
+        </button>
+      </div>
+
+      <template x-if="videos.length === 0">
+        <div class="text-center py-16 glass-card rounded-2xl border border-slate-800">
+          <i data-lucide="video" class="w-12 h-12 text-slate-600 mx-auto mb-3"></i>
+          <p class="text-slate-300 font-medium">Nenhum vídeo cadastrado.</p>
+        </div>
+      </template>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <template x-for="v in videos" :key="v.id">
+          <div class="glass-card p-4 rounded-xl border border-slate-800 flex flex-col justify-between">
+            <div>
+              <span class="text-[10px] font-semibold px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20" x-text="getSubjectName(v.subjectId)"></span>
+              <h4 class="font-bold text-slate-100 text-sm mt-2 mb-1" x-text="v.title"></h4>
+            </div>
+            <div class="flex items-center justify-between pt-4 mt-2 border-t border-slate-800/80">
+              <a :href="v.url" target="_blank" class="text-xs text-blue-400 hover:underline flex items-center gap-1">
+                Assistir <i data-lucide="external-link" class="w-3 h-3"></i>
+              </a>
+              <button @click="deleteVideo(v.id)" class="text-slate-500 hover:text-rose-400 p-1">
+                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+              </button>
+            </div>
+          </div>
+        </template>
+      </div>
+    </div>
+
+  </main>
+  <!-- MODAIS DE CADASTRO -->
+  <!-- MODAL MATÉRIA -->
+  <div x-show="activeModal === 'subject'" x-cloak class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="glass p-6 rounded-2xl max-w-md w-full border border-slate-800 space-y-4">
+      <h3 class="text-lg font-bold text-white">Cadastrar Nova Matéria</h3>
+      
+      <div>
+        <label class="block text-xs font-medium text-slate-400 mb-1">Nome da Matéria</label>
+        <input type="text" x-model="modalSubject.name" placeholder="Ex: Matemática, História" class="w-full bg-slate-900 border border-slate-800 rounded-lg p-2.5 text-xs text-slate-100 focus:outline-none focus:border-blue-500">
+      </div>
+
+      <div>
+        <label class="block text-xs font-medium text-slate-400 mb-1">Professor (Opcional)</label>
+        <input type="text" x-model="modalSubject.teacher" placeholder="Nome do professor" class="w-full bg-slate-900 border border-slate-800 rounded-lg p-2.5 text-xs text-slate-100 focus:outline-none focus:border-blue-500">
+      </div>
+
+      <div>
+        <label class="block text-xs font-medium text-slate-400 mb-1">Cor da Categoria</label>
+        <input type="color" x-model="modalSubject.color" class="w-full h-10 bg-slate-900 border border-slate-800 rounded-lg p-1 cursor-pointer">
+      </div>
+
+      <div class="flex justify-end gap-2 pt-2">
+        <button @click="closeModal()" class="px-4 py-2 rounded-lg text-xs font-medium text-slate-400 hover:bg-slate-800">Cancelar</button>
+        <button @click="saveSubject()" class="px-4 py-2 rounded-lg text-xs font-medium bg-blue-600 hover:bg-blue-500 text-white">Salvar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL SESSÃO MANUAL -->
+  <div x-show="activeModal === 'manualSession'" x-cloak class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="glass p-6 rounded-2xl max-w-md w-full border border-slate-800 space-y-4">
+      <h3 class="text-lg font-bold text-white">Registrar Horas de Estudo</h3>
+      
+      <div>
+        <label class="block text-xs font-medium text-slate-400 mb-1">Matéria</label>
+        <select x-model="modalSession.subjectId" class="w-full bg-slate-900 border border-slate-800 rounded-lg p-2.5 text-xs text-slate-100 focus:outline-none focus:border-blue-500">
+          <option value="">Selecione...</option>
+          <template x-for="sub in subjects" :key="sub.id">
+            <option :value="sub.id" x-text="sub.name"></option>
+          </template>
+        </select>
+      </div>
+
+      <div>
+        <label class="block text-xs font-medium text-slate-400 mb-1">Tempo estudado (em Minutos)</label>
+        <input type="number" x-model="modalSession.minutes" placeholder="Ex: 45" class="w-full bg-slate-900 border border-slate-800 rounded-lg p-2.5 text-xs text-slate-100 focus:outline-none focus:border-blue-500">
+      </div>
+
+      <div class="flex justify-end gap-2 pt-2">
+        <button @click="closeModal()" class="px-4 py-2 rounded-lg text-xs font-medium text-slate-400 hover:bg-slate-800">Cancelar</button>
+        <button @click="saveSession()" class="px-4 py-2 rounded-lg text-xs font-medium bg-blue-600 hover:bg-blue-500 text-white">Salvar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL ANOTAÇÃO -->
+  <div x-show="activeModal === 'note'" x-cloak class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="glass p-6 rounded-2xl max-w-lg w-full border border-slate-800 space-y-4">
+      <h3 class="text-lg font-bold text-white">Nova Anotação</h3>
+      
+      <div>
+        <label class="block text-xs font-medium text-slate-400 mb-1">Título</label>
+        <input type="text" x-model="modalNote.title" placeholder="Título do resumo..." class="w-full bg-slate-900 border border-slate-800 rounded-lg p-2.5 text-xs text-slate-100 focus:outline-none focus:border-blue-500">
+      </div>
+
+      <div>
+        <label class="block text-xs font-medium text-slate-400 mb-1">Matéria</label>
+        <select x-model="modalNote.subjectId" class="w-full bg-slate-900 border border-slate-800 rounded-lg p-2.5 text-xs text-slate-100 focus:outline-none focus:border-blue-500">
+          <option value="">Geral / Sem Matéria</option>
+          <template x-for="sub in subjects" :key="sub.id">
+            <option :value="sub.id" x-text="sub.name"></option>
+          </template>
+        </select>
+      </div>
+
+      <div>
+        <label class="block text-xs font-medium text-slate-400 mb-1">Conteúdo</label>
+        <textarea x-model="modalNote.content" rows="4" placeholder="Escreva suas notas aqui..." class="w-full bg-slate-900 border border-slate-800 rounded-lg p-2.5 text-xs text-slate-100 focus:outline-none focus:border-blue-500"></textarea>
+      </div>
+
+      <div class="flex justify-end gap-2 pt-2">
+        <button @click="closeModal()" class="px-4 py-2 rounded-lg text-xs font-medium text-slate-400 hover:bg-slate-800">Cancelar</button>
+        <button @click="saveNote()" class="px-4 py-2 rounded-lg text-xs font-medium bg-blue-600 hover:bg-blue-500 text-white">Salvar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL VÍDEO -->
+  <div x-show="activeModal === 'video'" x-cloak class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="glass p-6 rounded-2xl max-w-md w-full border border-slate-800 space-y-4">
+      <h3 class="text-lg font-bold text-white">Adicionar Videoaula</h3>
+      
+      <div>
+        <label class="block text-xs font-medium text-slate-400 mb-1">Título da Aula</label>
+        <input type="text" x-model="modalVideo.title" placeholder="Ex: Aula de Trigonometria" class="w-full bg-slate-900 border border-slate-800 rounded-lg p-2.5 text-xs text-slate-100 focus:outline-none focus:border-blue-500">
+      </div>
+
+      <div>
+        <label class="block text-xs font-medium text-slate-400 mb-1">Link (URL)</label>
+        <input type="url" x-model="modalVideo.url" placeholder="https://youtube.com/..." class="w-full bg-slate-900 border border-slate-800 rounded-lg p-2.5 text-xs text-slate-100 focus:outline-none focus:border-blue-500">
+      </div>
+
+      <div>
+        <label class="block text-xs font-medium text-slate-400 mb-1">Matéria</label>
+        <select x-model="modalVideo.subjectId" class="w-full bg-slate-900 border border-slate-800 rounded-lg p-2.5 text-xs text-slate-100 focus:outline-none focus:border-blue-500">
+          <option value="">Geral</option>
+          <template x-for="sub in subjects" :key="sub.id">
+            <option :value="sub.id" x-text="sub.name"></option>
+          </template>
+        </select>
+      </div>
+
+      <div class="flex justify-end gap-2 pt-2">
+        <button @click="closeModal()" class="px-4 py-2 rounded-lg text-xs font-medium text-slate-400 hover:bg-slate-800">Cancelar</button>
+        <button @click="saveVideo()" class="px-4 py-2 rounded-lg text-xs font-medium bg-blue-600 hover:bg-blue-500 text-white">Salvar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCRIPT LÓGICA ALPINE.JS -->
+  <script>
+    function studyFlowApp() {
+      return {
+        currentTab: 'dashboard',
+        activeModal: null,
+        
+        // DADOS LOCAIS
+        subjects: [],
+        sessions: [],
+        notes: [],
+        videos: [],
+        
+        searchNoteQuery: '',
+
+        // CAMPOS FORMULÁRIO
+        modalSubject: { name: '', teacher: '', color: '#3b82f6' },
+        modalSession: { subjectId: '', minutes: '' },
+        modalNote: { title: '', content: '', subjectId: '' },
+        modalVideo: { title: '', url: '', subjectId: '' },
+
+        // TIMER
+        timerSeconds: 1500, // 25 min
+        timerActive: false,
+        timerInterval: null,
+        selectedPomodoroSubject: '',
+
+        navItems: [
+          { id: 'dashboard', label: 'Início', icon: 'layout-dashboard' },
+          { id: 'subjects', label: 'Matérias', icon: 'book' },
+          { id: 'notes', label: 'Anotações', icon: 'file-text' },
+          { id: 'pomodoro', label: 'Modo Foco', icon: 'timer' },
+          { id: 'videos', label: 'Aulas/Links', icon: 'video' }
+        ],
+
+        initApp() {
+          this.loadData();
+          this.$nextTick(() => { lucide.createIcons(); });
+        },
+
+        // CARREGAR/SALVAR LOCAL STORAGE
+        loadData() {
+          this.subjects = JSON.parse(localStorage.getItem('sf_subjects') || '[]');
+          this.sessions = JSON.parse(localStorage.getItem('sf_sessions') || '[]');
+          this.notes = JSON.parse(localStorage.getItem('sf_notes') || '[]');
+          this.videos = JSON.parse(localStorage.getItem('sf_videos') || '[]');
+        },
+
+        saveData() {
+          localStorage.setItem('sf_subjects', JSON.stringify(this.subjects));
+          localStorage.setItem('sf_sessions', JSON.stringify(this.sessions));
+          localStorage.setItem('sf_notes', JSON.stringify(this.notes));
+          localStorage.setItem('sf_videos', JSON.stringify(this.videos));
+        },
+
+        // TITULOS DAS ABAS
+        getCurrentTabTitle() {
+          const titles = {
+            dashboard: 'Dashboard de Estudos',
+            subjects: 'Gerenciar Matérias',
+            notes: 'Caderno de Anotações',
+            pomodoro: 'Temporizador Pomodoro',
+            videos: 'Vídeos & Links de Apoio'
+          };
+          return titles[this.currentTab] || '';
+        },
+
+        getCurrentTabDesc() {
+          const descs = {
+            dashboard: 'Acompanhe seu rendimento diário e métricas.',
+            subjects: 'Cadastre suas matérias para organizar seus horários.',
+            notes: 'Guarde resumos, dúvidas e apontamentos importantes.',
+            pomodoro: 'Aumente sua concentração estudando em blocos de tempo.',
+            videos: 'Centralize aqui os links de videoaulas para rever.'
+          };
+          return descs[this.currentTab] || '';
+        },
+
+        // MATÉRIAS
+        saveSubject() {
+          if(!this.modalSubject.name.trim()) return;
+          this.subjects.push({
+            id: Date.now().toString(),
+            name: this.modalSubject.name.trim(),
+            teacher: this.modalSubject.teacher.trim(),
+            color: this.modalSubject.color
+          });
+          this.saveData();
+          this.closeModal();
+          this.modalSubject = { name: '', teacher: '', color: '#3b82f6' };
+        },
+
+        deleteSubject(id) {
+          if(confirm('Tem certeza que deseja excluir esta matéria?')) {
+            this.subjects = this.subjects.filter(s => s.id !== id);
+            this.saveData();
+          }
+        },
+
+        // SESSÕES DE ESTUDO
+        saveSession() {
+          const mins = parseInt(this.modalSession.minutes);
+          if(!this.modalSession.subjectId || !mins || mins <= 0) return;
+
+          this.sessions.push({
+            id: Date.now().toString(),
+            subjectId: this.modalSession.subjectId,
+            minutes: mins,
+            date: new Date().toISOString()
+          });
+
+          this.saveData();
+          this.closeModal();
+          this.modalSession = { subjectId: '', minutes: '' };
+        },
+
+        // ANOTAÇÕES
+        saveNote() {
+          if(!this.modalNote.title.trim()) return;
+          this.notes.push({
+            id: Date.now().toString(),
+            title: this.modalNote.title.trim(),
+            content: this.modalNote.content.trim(),
+            subjectId: this.modalNote.subjectId,
+            date: new Date().toISOString()
+          });
+          this.saveData();
+          this.closeModal();
+          this.modalNote = { title: '', content: '', subjectId: '' };
+        },
+
+        deleteNote(id) {
+          this.notes = this.notes.filter(n => n.id !== id);
+          this.saveData();
+        },
+
+        filteredNotes() {
+          if(!this.searchNoteQuery.trim()) return this.notes;
+          const q = this.searchNoteQuery.toLowerCase();
+          return this.notes.filter(n => n.title.toLowerCase().includes(q) || n.content.toLowerCase().includes(q));
+        },
+
+        // VÍDEOS
+        saveVideo() {
+          if(!this.modalVideo.title.trim() || !this.modalVideo.url.trim()) return;
+          this.videos.push({
+            id: Date.now().toString(),
+            title: this.modalVideo.title.trim(),
+            url: this.modalVideo.url.trim(),
+            subjectId: this.modalVideo.subjectId
+          });
+          this.saveData();
+          this.closeModal();
+          this.modalVideo = { title: '', url: '', subjectId: '' };
+        },
+
+        deleteVideo(id) {
+          this.videos = this.videos.filter(v => v.id !== id);
+          this.saveData();
+        },
+
+        // TIMER / POMODORO
+        toggleTimer() {
+          if(this.timerActive) {
+            clearInterval(this.timerInterval);
+            this.timerActive = false;
+          } else {
+            this.timerActive = true;
+            this.timerInterval = setInterval(() => {
+              if(this.timerSeconds > 0) {
+                this.timerSeconds--;
+              } else {
+                clearInterval(this.timerInterval);
+                this.timerActive = false;
+                alert('Sessão concluída!');
+                if(this.selectedPomodoroSubject) {
+                  this.sessions.push({
+                    id: Date.now().toString(),
+                    subjectId: this.selectedPomodoroSubject,
+                    minutes: 25,
+                    date: new Date().toISOString()
+                  });
+                  this.saveData();
                 }
-            }
+                this.timerSeconds = 1500;
+              }
+            }, 1000);
+          }
+        },
+
+        resetTimer() {
+          clearInterval(this.timerInterval);
+          this.timerActive = false;
+          this.timerSeconds = 1500;
+        },
+
+        formatTimer(sec) {
+          const m = Math.floor(sec / 60).toString().padStart(2, '0');
+          const s = (sec % 60).toString().padStart(2, '0');
+          return `${m}:${s}`;
+        },
+
+        // METRICAS / UTILITÁRIOS
+        get todayStudiedMinutes() {
+          const today = new Date().toISOString().split('T')[0];
+          return this.sessions
+            .filter(s => s.date.startsWith(today))
+            .reduce((acc, s) => acc + s.minutes, 0);
+        },
+
+        get totalStudiedMinutes() {
+          return this.sessions.reduce((acc, s) => acc + s.minutes, 0);
+        },
+
+        getSubjectTotalMinutes(subjectId) {
+          return this.sessions
+            .filter(s => s.subjectId === subjectId)
+            .reduce((acc, s) => acc + s.minutes, 0);
+        },
+
+        getSubjectName(subjectId) {
+          const sub = this.subjects.find(s => s.id === subjectId);
+          return sub ? sub.name : 'Geral';
+        },
+
+        formatMinutes(mins) {
+          if(!mins) return '0h 0m';
+          const h = Math.floor(mins / 60);
+          const m = mins % 60;
+          return `${h}h ${m}m`;
+        },
+
+        formatDate(iso) {
+          if(!iso) return '';
+          return new Date(iso).toLocaleDateString('pt-BR');
+        },
+
+        // MODAIS
+        openModal(type) {
+          this.activeModal = type;
+        },
+
+        closeModal() {
+          this.activeModal = null;
         }
-
-        function saveLocalStorage() {
-            localStorage.setItem('studyflow_modern_state', JSON.stringify(state));
-        }
-
-        function showToast(message, type = 'success') {
-            const container = document.getElementById('toastContainer');
-            const toast = document.createElement('div');
-            const bgClass = type === 'success' ? 'bg-indigo-600 text-white' : 'bg-amber-600 text-white';
-            
-            toast.className = `px-4 py-3 rounded-xl shadow-2xl text-xs font-semibold ${bgClass} flex items-center gap-2 pointer-events-auto animate-fadeIn transition-all`;
-            toast.innerHTML = `<i class="fa-solid fa-circle-info"></i> <span>${message}</span>`;
-            
-            container.appendChild(toast);
-            setTimeout(() => {
-                toast.style.opacity = '0';
-                setTimeout(() => toast.remove(), 300);
-            }, 3000);
-        }
-
-        function switchTab(tabId) {
-            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-            document.querySelectorAll('.nav-btn').forEach(el => {
-                el.classList.remove('active', 'bg-slate-800/80', 'text-white');
-                el.classList.add('text-slate-400');
-            });
-
-            const target = document.getElementById(`tab-${tabId}`);
-            const navBtn = document.getElementById(`nav-${tabId}`);
-
-            if (target) target.classList.remove('hidden');
-            if (navBtn) {
-                navBtn.classList.add('active', 'bg-slate-800/80', 'text-white');
-                navBtn.classList.remove('text-slate-400');
-            }
-
-            if (tabId === 'dashboard') updateDashboard();
-            if (tabId === 'notes') renderNotes();
-        }
-
-        function populateSubjectSelectors() {
-            const selects = ['noteSubject', 'noteFilterSubject', 'sessionSubject', 'timerSubjectSelect'];
-            selects.forEach(id => {
-                const el = document.getElementById(id);
-                if (!el) return;
-
-                const current = el.value;
-                if (id === 'noteFilterSubject') {
-                    el.innerHTML = '<option value="all">Todas as Matérias</option><option value="general">Geral / Sem Matéria</option>';
-                } else if (id === 'noteSubject') {
-                    el.innerHTML = '<option value="general">Geral / Nenhuma</option>';
-                } else if (id === 'timerSubjectSelect') {
-                    el.innerHTML = '<option value="">Sem matéria vinculada</option>';
-                } else {
-                    el.innerHTML = '';
-                }
-
-                state.subjects.forEach(sub => {
-                    const opt = document.createElement('option');
-                    opt.value = sub.id;
-                    opt.textContent = sub.name;
-                    el.appendChild(opt);
-                });
-
-                if (current) el.value = current;
-            });
-        }
-
-        // SUBJECTS
-        function openSubjectModal() { document.getElementById('subjectModal').classList.remove('hidden'); }
-        function closeSubjectModal() { document.getElementById('subjectModal').classList.add('hidden'); }
-
-        function saveSubject(e) {
-            e.preventDefault();
-            const name = document.getElementById('subjectName').value.trim();
-            const color = document.getElementById('subjectColor').value;
-
-            if (!name) return;
-
-            const newSubject = { id: 'sub_' + Date.now(), name, color };
-            state.subjects.push(newSubject);
-            saveLocalStorage();
-            populateSubjectSelectors();
-            renderSubjects();
-            updateDashboard();
-            closeSubjectModal();
-            document.getElementById('subjectName').value = '';
-            showToast('Matéria adicionada com sucesso!');
-        }
-
-        function deleteSubject(id) {
-            if (confirm('Deseja excluir esta matéria?')) {
-                state.subjects = state.subjects.filter(s => s.id !== id);
-                saveLocalStorage();
-                populateSubjectSelectors();
-                renderSubjects();
-                updateDashboard();
-                showToast('Matéria removida.');
-            }
-        }
-
-        function renderSubjects() {
-            const grid = document.getElementById('subjectsGrid');
-            if (!grid) return;
-
-            if (state.subjects.length === 0) {
-                grid.innerHTML = `
-                    <div class="col-span-full py-12 text-center glass-card rounded-2xl p-6">
-                        <i class="fa-solid fa-book-open text-3xl text-slate-600 mb-2"></i>
-                        <p class="text-xs text-slate-400">Nenhuma matéria cadastrada. Clique em "Adicionar Matéria".</p>
-                    </div>
-                `;
-                return;
-            }
-
-            grid.innerHTML = state.subjects.map(sub => {
-                const minutes = state.sessions
-                    .filter(s => s.subjectId === sub.id)
-                    .reduce((acc, s) => acc + s.minutes, 0);
-                const hours = (minutes / 60).toFixed(1);
-
-                return `
-                    <div class="glass-card glass-card-hover rounded-2xl p-5 flex flex-col justify-between space-y-4 border-l-4" style="border-left-color: ${sub.color}">
-                        <div class="flex justify-between items-start">
-                            <div>
-                                <h3 class="font-bold text-white text-base">${escapeHtml(sub.name)}</h3>
-                                <span class="text-[11px] text-slate-400 font-medium">${hours}h estudadas</span>
-                            </div>
-                            <button onclick="deleteSubject('${sub.id}')" class="text-slate-500 hover:text-rose-400 text-xs transition-colors">
-                                <i class="fa-solid fa-trash"></i>
-                            </button>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-        }
-
-        // NOTES
-        function toggleNoteFavFilter() {
-            filterOnlyFavNotes = !filterOnlyFavNotes;
-            const btn = document.getElementById('noteFilterFavoriteBtn');
-            const icon = document.getElementById('noteFavFilterIcon');
-
-            if (filterOnlyFavNotes) {
-                btn.classList.add('bg-amber-500/10', 'border-amber-500/50', 'text-amber-400');
-                icon.classList.remove('text-slate-500');
-                icon.classList.add('text-amber-400');
-            } else {
-                btn.classList.remove('bg-amber-500/10', 'border-amber-500/50', 'text-amber-400');
-                icon.classList.add('text-slate-500');
-                icon.classList.remove('text-amber-400');
-            }
-            renderNotes();
-        }
-
-        function openNoteModal(noteId = null) {
-            populateSubjectSelectors();
-            const modal = document.getElementById('noteModal');
-            const form = document.getElementById('noteForm');
-            form.reset();
-            document.getElementById('noteId').value = '';
-
-            if (noteId) {
-                const note = state.notes.find(n => n.id === noteId);
-                if (note) {
-                    document.getElementById('noteId').value = note.id;
-                    document.getElementById('noteTitle').value = note.title;
-                    document.getElementById('noteSubject').value = note.subjectId || 'general';
-                    document.getElementById('noteCategory').value = note.category || 'Resumo';
-                    document.getElementById('noteFavorite').checked = !!note.favorite;
-                    document.getElementById('noteContent').value = note.content;
-                }
-            }
-            modal.classList.remove('hidden');
-        }
-
-        function closeNoteModal() { document.getElementById('noteModal').classList.add('hidden'); }
-
-        function saveNote(e) {
-            e.preventDefault();
-            const id = document.getElementById('noteId').value;
-            const title = document.getElementById('noteTitle').value.trim();
-            const subjectId = document.getElementById('noteSubject').value;
-            const category = document.getElementById('noteCategory').value;
-            const favorite = document.getElementById('noteFavorite').checked;
-            const content = document.getElementById('noteContent').value.trim();
-
-            if (!title || !content) return;
-
-            if (id) {
-                const idx = state.notes.findIndex(n => n.id === id);
-                if (idx !== -1) {
-                    state.notes[idx] = { ...state.notes[idx], title, subjectId, category, favorite, content, updatedAt: new Date().toISOString() };
-                }
-            } else {
-                state.notes.unshift({
-                    id: 'note_' + Date.now(),
-                    title, subjectId, category, favorite, content,
-                    createdAt: new Date().toISOString(),
-                    updatedAt: new Date().toISOString()
-                });
-            }
-
-            saveLocalStorage();
-            closeNoteModal();
-            renderNotes();
-            updateDashboard();
-            showToast('Anotação salva!');
-        }
-
-        function toggleNoteFavorite(id) {
-            const note = state.notes.find(n => n.id === id);
-            if (note) {
-                note.favorite = !note.favorite;
-                saveLocalStorage();
-                renderNotes();
-            }
-        }
-
-        function deleteNote(id) {
-            if (confirm('Deseja excluir esta anotação?')) {
-                state.notes = state.notes.filter(n => n.id !== id);
-                saveLocalStorage();
-                renderNotes();
-                updateDashboard();
-                showToast('Anotação excluída.');
-            }
-        }
-
-        function renderNotes() {
-            const container = document.getElementById('notesContainer');
-            if (!container) return;
-
-            const search = (document.getElementById('noteSearchInput')?.value || '').toLowerCase();
-            const subjectFilter = document.getElementById('noteFilterSubject')?.value || 'all';
-            const categoryFilter = document.getElementById('noteFilterCategory')?.value || 'all';
-
-            let filtered = state.notes.filter(note => {
-                const matchSearch = note.title.toLowerCase().includes(search) || note.content.toLowerCase().includes(search);
-                const matchSubject = subjectFilter === 'all' || (subjectFilter === 'general' && (!note.subjectId || note.subjectId === 'general')) || note.subjectId === subjectFilter;
-                const matchCategory = categoryFilter === 'all' || note.category === categoryFilter;
-                const matchFav = !filterOnlyFavNotes || note.favorite;
-                return matchSearch && matchSubject && matchCategory && matchFav;
-            });
-
-            if (filtered.length === 0) {
-                container.innerHTML = `
-                    <div class="col-span-full py-12 text-center glass-card rounded-2xl p-6">
-                        <i class="fa-solid fa-note-sticky text-3xl text-slate-600 mb-2"></i>
-                        <p class="text-xs text-slate-400">Nenhuma anotação encontrada.</p>
-                    </div>
-                `;
-                return;
-            }
-
-            container.innerHTML = filtered.map(note => {
-                const subject = state.subjects.find(s => s.id === note.subjectId);
-                const subjectName = subject ? subject.name : 'Geral';
-                const subjectColor = subject ? subject.color : '#94a3b8';
-
-                return `
-                    <div class="glass-card glass-card-hover rounded-2xl p-5 flex flex-col justify-between space-y-3 relative group">
-                        <div class="space-y-2">
-                            <div class="flex items-center justify-between">
-                                <span class="px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider" style="background-color: ${subjectColor}20; color: ${subjectColor}">
-                                    ${escapeHtml(subjectName)}
-                                </span>
-                                <div class="flex items-center gap-1">
-                                    <button onclick="toggleNoteFavorite('${note.id}')" class="text-slate-500 hover:text-amber-400 p-1">
-                                        <i class="fa-${note.favorite ? 'solid text-amber-400' : 'regular'} fa-star text-xs"></i>
-                                    </button>
-                                    <button onclick="openNoteModal('${note.id}')" class="text-slate-500 hover:text-white p-1">
-                                        <i class="fa-solid fa-pen text-xs"></i>
-                                    </button>
-                                    <button onclick="deleteNote('${note.id}')" class="text-slate-500 hover:text-rose-400 p-1">
-                                        <i class="fa-solid fa-trash text-xs"></i>
-                                    </button>
-                                </div>
-                            </div>
-                            <h3 class="font-bold text-white text-sm">${escapeHtml(note.title)}</h3>
-                            <p class="text-slate-400 text-xs leading-relaxed line-clamp-4 font-mono bg-slate-950/40 p-3 rounded-xl border border-slate-800/40">${escapeHtml(note.content)}</p>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-        }
-
-        // TIMER LOGIC
-        function setTimerMode(mode) {
-            currentTimerMode = mode;
-            if (timerInterval) clearInterval(timerInterval);
-            timerRunning = false;
-            updateTimerToggleIcon();
-
-            if (mode === 'pomodoro') timerSeconds = 25 * 60;
-            if (mode === 'short') timerSeconds = 5 * 60;
-            if (mode === 'long') timerSeconds = 15 * 60;
-
-            updateTimerDisplay();
-        }
-
-        function toggleTimer() {
-            if (timerRunning) {
-                clearInterval(timerInterval);
-                timerRunning = false;
-            } else {
-                timerRunning = true;
-                timerInterval = setInterval(() => {
-                    if (timerSeconds > 0) {
-                        timerSeconds--;
-                        updateTimerDisplay();
-                    } else {
-                        clearInterval(timerInterval);
-                        timerRunning = false;
-                        showToast('Tempo concluído!');
-                        
-                        const subjectId = document.getElementById('timerSubjectSelect').value;
-                        if (currentTimerMode === 'pomodoro' && subjectId) {
-                            state.sessions.push({ id: 'sess_' + Date.now(), subjectId, minutes: 25, date: new Date().toISOString() });
-                            saveLocalStorage();
-                            updateDashboard();
-                        }
-                    }
-                    updateTimerToggleIcon();
-                }, 1000);
-            }
-            updateTimerToggleIcon();
-        }
-
-        function resetTimer() {
-            setTimerMode(currentTimerMode);
-        }
-
-        function updateTimerDisplay() {
-            const m = Math.floor(timerSeconds / 60).toString().padStart(2, '0');
-            const s = (timerSeconds % 60).toString().padStart(2, '0');
-            document.getElementById('timerDisplay').textContent = `${m}:${s}`;
-        }
-
-        function updateTimerToggleIcon() {
-            const icon = document.getElementById('timerToggleIcon');
-            icon.className = timerRunning ? 'fa-solid fa-pause' : 'fa-solid fa-play';
-        }
-
-        // SESSIONS
-        function openSessionModal() {
-            populateSubjectSelectors();
-            document.getElementById('sessionModal').classList.remove('hidden');
-        }
-        function closeSessionModal() { document.getElementById('sessionModal').classList.add('hidden'); }
-
-        function saveSession(e) {
-            e.preventDefault();
-            const subjectId = document.getElementById('sessionSubject').value;
-            const minutes = parseInt(document.getElementById('sessionMinutes').value);
-
-            if (!subjectId || isNaN(minutes) || minutes <= 0) return;
-
-            state.sessions.push({
-                id: 'sess_' + Date.now(),
-                subjectId,
-                minutes,
-                date: new Date().toISOString()
-            });
-
-            saveLocalStorage();
-            updateDashboard();
-            renderSubjects();
-            closeSessionModal();
-            showToast('Estudo registrado com sucesso!');
-        }
-
-        // DASHBOARD & CHARTS
-        function updateDashboard() {
-            const totalMinutes = state.sessions.reduce((acc, s) => acc + s.minutes, 0);
-            document.getElementById('dashTotalHours').textContent = (totalMinutes / 60).toFixed(1) + 'h';
-            document.getElementById('dashTotalSessions').textContent = state.sessions.length;
-            document.getElementById('dashTotalNotes').textContent = state.notes.length;
-
-            const recentsContainer = document.getElementById('dashRecentNotes');
-            if (recentsContainer) {
-                const recents = state.notes.slice(0, 3);
-                if (recents.length === 0) {
-                    recentsContainer.innerHTML = '<p class="text-xs text-slate-500">Nenhuma anotação criada ainda.</p>';
-                } else {
-                    recentsContainer.innerHTML = recents.map(n => `
-                        <div class="p-3 bg-slate-950/50 border border-slate-800 rounded-xl space-y-1">
-                            <h4 class="text-xs font-bold text-white line-clamp-1">${escapeHtml(n.title)}</h4>
-                            <p class="text-[11px] text-slate-400 line-clamp-1">${escapeHtml(n.content)}</p>
-                        </div>
-                    `).join('');
-                }
-            }
-
-            updateChart();
-        }
-
-        function initChart() {
-            const ctx = document.getElementById('subjectChart')?.getContext('2d');
-            if (!ctx) return;
-
-            chartInstance = new Chart(ctx, {
-                type: 'doughnut',
-                data: {
-                    labels: [],
-                    datasets: [{
-                        data: [],
-                        backgroundColor: [],
-                        borderWidth: 0
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { position: 'bottom', labels: { color: '#94a3b8', font: { family: 'Inter', size: 11 } } }
-                    }
-                }
-            });
-            updateChart();
-        }
-
-        function updateChart() {
-
-            if (data.length === 0) {
-                chartInstance.data.labels = ['Sem registros'];
-                chartInstance.data.datasets[0].data = [1];
-                chartInstance.data.datasets[0].backgroundColor = ['#334155'];
-            } else {
-                chartInstance.data.labels = labels;
-                chartInstance.data.datasets[0].data = data;
-                chartInstance.data.datasets[0].backgroundColor = colors;
-            }
-
-            chartInstance.update();
-        }
-
-        function renderAllViews() {
-            renderSubjects();
-            renderNotes();
-            updateDashboard();
-        }
-
-        function escapeHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
-        }
-    </script>
+      }
+    }
+  </script>
 </body>
 </html>
