@@ -240,9 +240,9 @@
                   <p class="text-xs text-slate-400" x-text="subject.teacher ? 'Prof. ' + subject.teacher : 'Sem professor informado'"></p>
                 </div>
               </div>
-              <button @click="deleteSubject(subject.id)" class="opacity-0 group-hover:opacity-100 text-slate-500 hover:text-rose-400 transition p-1">
-                <i data-lucide="trash-2" class="w-4 h-4"></i>
-              </button>
+            <button @click="deleteSubject(subject.id)" class="text-slate-400 hover:text-rose-400 p-1.5 rounded-lg hover:bg-slate-800 transition" title="Excluir matéria">
+  <i data-lucide="trash-2" class="w-4 h-4"></i>
+</button>
             </div>
             <div class="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-400">
               <span>Total acumulado:</span>
